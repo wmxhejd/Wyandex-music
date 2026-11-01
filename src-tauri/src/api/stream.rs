@@ -9,37 +9,38 @@ impl YandexApiClient {
         let clean_id = track_id.split(':').next().unwrap_or(track_id).trim();
         let response = self.get(&format!("/tracks/{}/download-info", clean_id)).await?;
         let wrapper: YandexResponse<Vec<DownloadInfo>> = response
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse download info: {}", e))?;
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse download info: {}", e))?;
 
         let mut mp3_infos: Vec<DownloadInfo> = wrapper.result
-            .into_iter()
-            .filter(|info| info.codec.to_lowercase() == "mp3")
-            .collect();
+        .into_iter()
+        .filter(|info| info.codec.to_lowercase() == "mp3")
+        .collect();
 
         mp3_infos.sort_by(|a, b| b.bitrate_in_kbps.cmp(&a.bitrate_in_kbps));
         Ok(mp3_infos)
     }
 
     pub async fn get_direct_link(&self, download_url: &str) -> Result<String, String> {
-        let response = reqwest::get(download_url)
-            .await
-            .map_err(|e| format!("Failed to fetch direct link: {}", e))?;
+        let response = self.client.get(download_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch direct link: {}", e))?;
 
         let xml_text = response
-            .text()
-            .await
-            .map_err(|e| format!("Failed to read XML response: {}", e))?;
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read XML response: {}", e))?;
 
         let host = Self::extract_xml_tag(&xml_text, "host")
-            .ok_or("Failed to extract host from XML")?;
+        .ok_or("Failed to extract host from XML")?;
         let path = Self::extract_xml_tag(&xml_text, "path")
-            .ok_or("Failed to extract path from XML")?;
+        .ok_or("Failed to extract path from XML")?;
         let ts = Self::extract_xml_tag(&xml_text, "ts")
-            .ok_or("Failed to extract ts from XML")?;
+        .ok_or("Failed to extract ts from XML")?;
         let s = Self::extract_xml_tag(&xml_text, "s")
-            .ok_or("Failed to extract s from XML")?;
+        .ok_or("Failed to extract s from XML")?;
 
         let path_without_slash = path.trim_start_matches('/');
         let sign_input = format!("{}{}{}", SECRET_SALT, path_without_slash, s);

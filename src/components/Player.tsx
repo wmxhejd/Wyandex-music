@@ -32,6 +32,8 @@ export interface PlayerHandle {
   openExpanded: () => void;
 }
 
+const urlCache = new Map<string, string>();
+
 const Player = forwardRef<PlayerHandle, PlayerProps>(({
   track,
   isPlaying,
@@ -39,7 +41,6 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   onPrevTrack,
   shuffle,
   onShuffleToggle,
-  isDirectClick = false,
   audioRef,
   onArtistClick,
   hideBottomBar = false,
@@ -63,7 +64,6 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
 
   const isDraggingRef = useRef(false);
   const activeRequestIdRef = useRef(0);
-  const debounceTimerRef = useRef<number | null>(null);
   const lyricsContainerRef = useRef<HTMLDivElement>(null);
   const activeLineRef = useRef<HTMLDivElement>(null);
   const { isLiked, toggleLike } = useLikes();
@@ -136,11 +136,6 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   useEffect(() => {
     if (!track) return;
     loadStreamUrl();
-    return () => {
-      if (debounceTimerRef.current !== null) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
   }, [track?.id]);
 
   useEffect(() => {
@@ -161,28 +156,28 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       title: track.title,
       durationMs: track.durationMs,
     })
-      .then((data) => {
-        if (!isCancelled) {
-          setLyricsData(data);
-          const defaultSource = data.providers?.[0]?.source || "yandex";
-          setSelectedProvider(defaultSource);
-          if (data.syncedLyrics) {
-            setLyricsMode("karaoke");
-          } else {
-            setLyricsMode("plain");
-          }
+    .then((data) => {
+      if (!isCancelled) {
+        setLyricsData(data);
+        const defaultSource = data.providers?.[0]?.source || "yandex";
+        setSelectedProvider(defaultSource);
+        if (data.syncedLyrics) {
+          setLyricsMode("karaoke");
+        } else {
+          setLyricsMode("plain");
         }
-      })
-      .catch(() => {
-        if (!isCancelled) {
-          setLyricsData(null);
-        }
-      })
-      .finally(() => {
-        if (!isCancelled) {
-          setLyricsLoading(false);
-        }
-      });
+      }
+    })
+    .catch(() => {
+      if (!isCancelled) {
+        setLyricsData(null);
+      }
+    })
+    .finally(() => {
+      if (!isCancelled) {
+        setLyricsLoading(false);
+      }
+    });
 
     return () => {
       isCancelled = true;
@@ -193,8 +188,8 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsExpanded(false);
     };
-    if (isExpanded) window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+      if (isExpanded) window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
 
   useEffect(() => {
@@ -207,8 +202,8 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       setCurrentTime(audio.currentTime);
       const audioDuration = audio.duration;
       setDuration(!isNaN(audioDuration) && audioDuration > 0
-        ? audioDuration
-        : track.durationMs / 1000
+      ? audioDuration
+      : track.durationMs / 1000
       );
     };
 
@@ -262,25 +257,25 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     navigator.mediaSession.setActionHandler("pause", () => {
       if (audioRef.current) audioRef.current.pause();
     });
-    navigator.mediaSession.setActionHandler("nexttrack", () => {
-      onNextTrack(true);
-    });
-    navigator.mediaSession.setActionHandler("previoustrack", () => {
-      onPrevTrack();
-    });
-    navigator.mediaSession.setActionHandler("seekto", (details) => {
-      if (details.seekTime && audioRef.current) {
-        audioRef.current.currentTime = details.seekTime;
-      }
-    });
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        onNextTrack(true);
+      });
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        onPrevTrack();
+      });
+      navigator.mediaSession.setActionHandler("seekto", (details) => {
+        if (details.seekTime && audioRef.current) {
+          audioRef.current.currentTime = details.seekTime;
+        }
+      });
 
-    return () => {
-      navigator.mediaSession.setActionHandler("play", null);
-      navigator.mediaSession.setActionHandler("pause", null);
-      navigator.mediaSession.setActionHandler("nexttrack", null);
-      navigator.mediaSession.setActionHandler("previoustrack", null);
-      navigator.mediaSession.setActionHandler("seekto", null);
-    };
+      return () => {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
+      };
   }, [track?.id, onNextTrack, onPrevTrack]);
 
   useEffect(() => {
@@ -298,50 +293,38 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   const loadStreamUrl = async () => {
     if (!track) return;
 
-    try {
-      setLoading(true);
+    const currentRequestId = ++activeRequestIdRef.current;
+    setLoading(true);
 
-      if (debounceTimerRef.current !== null) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
+    try {
+      let url = urlCache.get(track.id);
+      if (!url) {
+        url = await invoke<string>("get_stream_url", { trackId: track.id });
+        urlCache.set(track.id, url);
       }
 
-      const currentRequestId = ++activeRequestIdRef.current;
-      const debounceDelay = isDirectClick ? 0 : 200;
+      if (currentRequestId !== activeRequestIdRef.current) return;
 
-      debounceTimerRef.current = window.setTimeout(async () => {
-        try {
-          const url = await invoke<string>("get_stream_url", { trackId: track.id });
+      const audio = audioRef.current;
+      if (!audio) return;
 
-          if (currentRequestId !== activeRequestIdRef.current) {
-            return;
-          }
+      audio.pause();
+      audio.src = url;
+      audio.currentTime = 0;
+      audio.volume = Math.pow(volume / 100, 3);
+      audio.load();
 
-          const audio = audioRef.current;
-          if (!audio) return;
-
-          audio.pause();
-          audio.src = url;
-          audio.currentTime = 0;
-          audio.volume = Math.pow(volume / 100, 3);
-          audio.load();
-
-          audio.play().catch((e) => {
-            if (e.name !== "AbortError") {
-              console.error("Playback error:", e);
-            }
-          });
-        } catch (err) {
-          console.error("Failed to load stream URL:", err);
-        } finally {
-          if (currentRequestId === activeRequestIdRef.current) {
-            setLoading(false);
-          }
+      audio.play().catch((e) => {
+        if (e.name !== "AbortError") {
+          console.error("Playback error:", e);
         }
-      }, debounceDelay);
+      });
     } catch (err) {
-      console.error("Failed to initialize stream load:", err);
-      setLoading(false);
+      console.error("Failed to load stream URL:", err);
+    } finally {
+      if (currentRequestId === activeRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -403,110 +386,110 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
 
   return (
     <>
-      {isExpanded && (
-        <ExpandedPlayer
-          title={track.title}
-          artistNames={artistNames}
-          coverUrl={coverUrl}
-          isPlaying={isPlaying}
-          repeat={repeat}
-          trackIsLiked={trackIsLiked}
-          currentTime={currentTime}
-          duration={duration}
-          volume={volume}
-          onVolumeChange={handleVolumeChange}
-          isDraggingRef={isDraggingRef}
-          showLyricsColumn={showLyricsColumn}
-          lyricsMode={lyricsMode}
-          setLyricsMode={setLyricsMode}
-          lyricsLoading={lyricsLoading}
-          parsedLyrics={parsedLyrics}
-          plainLyrics={currentLyrics.plainLyrics}
-          currentLineIndex={currentLineIndex}
-          activeLineRef={activeLineRef}
-          lyricsContainerRef={lyricsContainerRef}
-          hasLyrics={hasPlain || hasSynced}
-          hasSynced={hasSynced}
-          hasPlain={hasPlain}
-          providers={lyricsData?.providers || []}
-          currentProvider={selectedProvider}
-          onSelectProvider={(src) => {
-            setSelectedProvider(src);
-            const p = lyricsData?.providers?.find((x) => x.source === src);
-            if (p?.syncedLyrics) {
-              setLyricsMode("karaoke");
-            } else if (p?.plainLyrics) {
-              setLyricsMode("plain");
-            }
-          }}
-          onClose={() => setIsExpanded(false)}
-          onPrev={handlePrevious}
-          onPlayPause={() => {
-            if (!audioRef.current) return;
-            if (isPlaying) {
-              audioRef.current.pause();
-            } else {
-              audioRef.current.play().catch(() => {});
-            }
-          }}
-          onNext={() => onNextTrack(true)}
-          onLikeClick={handleLikeClick}
-          onRepeatToggle={() => setRepeat(!repeat)}
-          onToggleLyricsColumn={() => setShowLyricsColumn(!showLyricsColumn)}
-          onArtistClick={handleArtistClickAction}
-          onSeek={handleSeek}
-          onLineClick={handleLineClick}
-        />
-      )}
+    {isExpanded && (
+      <ExpandedPlayer
+      title={track.title}
+      artistNames={artistNames}
+      coverUrl={coverUrl}
+      isPlaying={isPlaying}
+      repeat={repeat}
+      trackIsLiked={trackIsLiked}
+      currentTime={currentTime}
+      duration={duration}
+      volume={volume}
+      onVolumeChange={handleVolumeChange}
+      isDraggingRef={isDraggingRef}
+      showLyricsColumn={showLyricsColumn}
+      lyricsMode={lyricsMode}
+      setLyricsMode={setLyricsMode}
+      lyricsLoading={lyricsLoading}
+      parsedLyrics={parsedLyrics}
+      plainLyrics={currentLyrics.plainLyrics}
+      currentLineIndex={currentLineIndex}
+      activeLineRef={activeLineRef}
+      lyricsContainerRef={lyricsContainerRef}
+      hasLyrics={hasPlain || hasSynced}
+      hasSynced={hasSynced}
+      hasPlain={hasPlain}
+      providers={lyricsData?.providers || []}
+      currentProvider={selectedProvider}
+      onSelectProvider={(src) => {
+        setSelectedProvider(src);
+        const p = lyricsData?.providers?.find((x) => x.source === src);
+        if (p?.syncedLyrics) {
+          setLyricsMode("karaoke");
+        } else if (p?.plainLyrics) {
+          setLyricsMode("plain");
+        }
+      }}
+      onClose={() => setIsExpanded(false)}
+      onPrev={handlePrevious}
+      onPlayPause={() => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play().catch(() => {});
+        }
+      }}
+      onNext={() => onNextTrack(true)}
+      onLikeClick={handleLikeClick}
+      onRepeatToggle={() => setRepeat(!repeat)}
+      onToggleLyricsColumn={() => setShowLyricsColumn(!showLyricsColumn)}
+      onArtistClick={handleArtistClickAction}
+      onSeek={handleSeek}
+      onLineClick={handleLineClick}
+      />
+    )}
 
-      {!hideBottomBar && (
-        <BottomBar
-          title={track.title}
-          artistNames={artistNames}
-          coverUrl={coverUrl}
-          trackIsLiked={trackIsLiked}
-          isPlaying={isPlaying}
-          loading={loading}
-          repeat={repeat}
-          shuffle={shuffle}
-          currentTime={currentTime}
-          duration={duration}
-          volume={volume}
-          hasPlain={hasPlain}
-          hasSynced={hasSynced}
-          isDraggingRef={isDraggingRef}
-          onExpand={() => {
-            setIsExpanded(true);
-            setShowLyricsColumn(false);
-          }}
-          onArtistClick={handleArtistClickAction}
-          onLikeClick={handleLikeClick}
-          onShuffleToggle={onShuffleToggle}
-          onPrev={handlePrevious}
-          onPlayPause={() => {
-            if (!audioRef.current) return;
-            if (isPlaying) {
-              audioRef.current.pause();
-            } else {
-              audioRef.current.play().catch(() => {});
-            }
-          }}
-          onNext={() => onNextTrack(true)}
-          onRepeatToggle={() => setRepeat(!repeat)}
-          onSeek={handleSeek}
-          onOpenPlainLyrics={() => {
-            setLyricsMode("plain");
-            setShowLyricsColumn(true);
-            setIsExpanded(true);
-          }}
-          onOpenKaraokeLyrics={() => {
-            setLyricsMode("karaoke");
-            setShowLyricsColumn(true);
-            setIsExpanded(true);
-          }}
-          onVolumeChange={handleVolumeChange}
-        />
-      )}
+    {!hideBottomBar && (
+      <BottomBar
+      title={track.title}
+      artistNames={artistNames}
+      coverUrl={coverUrl}
+      trackIsLiked={trackIsLiked}
+      isPlaying={isPlaying}
+      loading={loading}
+      repeat={repeat}
+      shuffle={shuffle}
+      currentTime={currentTime}
+      duration={duration}
+      volume={volume}
+      hasPlain={hasPlain}
+      hasSynced={hasSynced}
+      isDraggingRef={isDraggingRef}
+      onExpand={() => {
+        setIsExpanded(true);
+        setShowLyricsColumn(false);
+      }}
+      onArtistClick={handleArtistClickAction}
+      onLikeClick={handleLikeClick}
+      onShuffleToggle={onShuffleToggle}
+      onPrev={handlePrevious}
+      onPlayPause={() => {
+        if (!audioRef.current) return;
+        if (isPlaying) {
+          audioRef.current.pause();
+        } else {
+          audioRef.current.play().catch(() => {});
+        }
+      }}
+      onNext={() => onNextTrack(true)}
+      onRepeatToggle={() => setRepeat(!repeat)}
+      onSeek={handleSeek}
+      onOpenPlainLyrics={() => {
+        setLyricsMode("plain");
+        setShowLyricsColumn(true);
+        setIsExpanded(true);
+      }}
+      onOpenKaraokeLyrics={() => {
+        setLyricsMode("karaoke");
+        setShowLyricsColumn(true);
+        setIsExpanded(true);
+      }}
+      onVolumeChange={handleVolumeChange}
+      />
+    )}
     </>
   );
 });

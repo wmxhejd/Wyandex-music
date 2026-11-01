@@ -1,97 +1,82 @@
-import { Radio, Heart, ListMusic, LogOut, Search, X } from "lucide-react";
-import { useState } from "react";
+import { Radio, Heart, ListMusic, Search, Settings } from "lucide-react";
 
 interface SidebarProps {
   currentView: string;
-  onViewChange: (view: "wave" | "liked" | "playlists") => void;
-  onLogout: () => void;
-  onSearch: (query: string) => void;
+  onViewChange: (view: "search" | "wave" | "liked" | "playlists" | "settings") => void;
 }
 
-export default function Sidebar({ currentView, onViewChange, onLogout, onSearch }: SidebarProps) {
-  const [searchInput, setSearchInput] = useState("");
-
+export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const menuItems = [
-    { id: "wave", label: "Моя волна", icon: Radio },
-    { id: "liked", label: "Любимые треки", icon: Heart },
-    { id: "playlists", label: "Плейлисты", icon: ListMusic },
+    {
+      id: "search",
+      label: "Поиск",
+      icon: Search,
+      offset: "translate-x-14 hover:translate-x-16",
+    },
+    {
+      id: "wave",
+      label: "Моя волна",
+      icon: Radio,
+      offset: "translate-x-7 hover:translate-x-9",
+    },
+    {
+      id: "liked",
+      label: "Любимые треки",
+      icon: Heart,
+      offset: "translate-x-2 hover:translate-x-4",
+    },
+    {
+      id: "playlists",
+      label: "Плейлисты",
+      icon: ListMusic,
+      offset: "translate-x-7 hover:translate-x-9",
+    },
+    {
+      id: "settings",
+      label: "Настройки",
+      icon: Settings,
+      offset: "translate-x-14 hover:translate-x-16",
+    },
   ];
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchInput.trim()) {
-      onSearch(searchInput.trim());
-    }
-  };
-
-  const handleClearSearch = () => {
-    setSearchInput("");
-    onSearch("");
-  };
-
   return (
-    <aside className="w-64 bg-[#0a0a0e] border-r border-white/[0.06] flex flex-col flex-shrink-0">
-      <div data-tauri-drag-region className="p-4 border-b border-white/[0.06] flex items-center space-x-3 select-none">
-        <img src="/icon.svg" alt="Logo" className="w-7 h-7 object-contain pointer-events-none" />
-        <div data-tauri-drag-region className="min-w-0 pointer-events-none">
-          <h1 className="text-sm font-bold text-white truncate leading-tight">Wyandexmusic</h1>
-          <p className="text-[10px] text-[var(--text-secondary)] leading-none mt-0.5">Desktop Player</p>
-        </div>
-      </div>
+    <aside className="absolute left-0 top-0 bottom-0 w-80 z-30 pointer-events-none flex flex-col justify-center select-none">
+    <nav className="px-6 py-10 flex flex-col space-y-6 pointer-events-auto">
+    {menuItems.map((item) => {
+      const Icon = item.icon;
+      const isActive = currentView === item.id;
 
-      <div className="p-3 border-b border-white/[0.06]">
-        <form onSubmit={handleSearchSubmit} className="relative">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)]" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Поиск музыки..."
-            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl pl-9 pr-9 py-2 text-sm text-white placeholder:text-[var(--text-secondary)] focus:outline-none focus:border-white/20 transition"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={handleClearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-white transition"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </form>
-      </div>
-
-      <nav className="flex-1 p-3 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = currentView === item.id;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id as any)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                isActive
-                  ? "bg-[#ffcc00] text-black shadow-lg shadow-[#ffcc00]/10 font-semibold"
-                  : "text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-white"
-              }`}
-            >
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <div className="p-3 border-t border-white/[0.06]">
+      return (
+        <div key={item.id} className="transition-transform duration-300 ease-out">
         <button
-          onClick={onLogout}
-          className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition"
+        onClick={() => onViewChange(item.id as any)}
+        className={`group flex items-center space-x-4 py-2.5 px-3 rounded-2xl transition-all duration-300 ${item.offset} ${
+          isActive ? "text-white" : "text-white/40 hover:text-white"
+        }`}
         >
-          <LogOut size={16} />
-          <span>Выйти</span>
+        <div
+        className={`w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+          isActive
+          ? "text-[#ffcc00] drop-shadow-[0_0_16px_rgba(255,204,0,0.8)] scale-110"
+          : "text-white/40 group-hover:text-white group-hover:scale-105"
+        }`}
+        >
+        <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+        </div>
+        <span
+        className={`text-sm tracking-wide transition-all ${
+          isActive
+          ? "font-extrabold text-white text-base drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]"
+          : "font-semibold group-hover:drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+        }`}
+        >
+        {item.label}
+        </span>
         </button>
-      </div>
+        </div>
+      );
+    })}
+    </nav>
     </aside>
   );
 }

@@ -61,112 +61,112 @@ export default function BottomBar({
   onVolumeChange,
 }: BottomBarProps) {
   return (
-    <div className="glass-strong border-t border-white/20 backdrop-blur-xl">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between space-x-6">
-          <div className="flex items-center space-x-4 flex-1 min-w-0">
-            <div
-              onClick={onExpand}
-              className="relative group cursor-pointer flex-shrink-0"
-              title="Развернуть полноэкранный плеер"
-            >
-              {coverUrl ? (
-                <img
-                  src={coverUrl}
-                  alt={title}
-                  className="w-16 h-16 rounded-xl object-cover transition-transform group-hover:scale-105"
-                />
-              ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-cyber-purple rounded-xl" />
-              )}
-              <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <Maximize2 size={20} className="text-white" />
-              </div>
-            </div>
+    <div className="bg-black/10 backdrop-blur-2xl border-t border-white/[0.06] select-none">
+    <div className="px-6 py-4">
+    <div className="flex items-center justify-between space-x-6">
+    <div className="flex items-center space-x-4 flex-1 min-w-0">
+    <div
+    onClick={onExpand}
+    className="relative group cursor-pointer flex-shrink-0"
+    title="Развернуть полноэкранный плеер"
+    >
+    {coverUrl ? (
+      <img
+      src={coverUrl}
+      alt={title}
+      className="w-16 h-16 rounded-xl object-cover transition-transform group-hover:scale-105 shadow-lg"
+      />
+    ) : (
+      <div className="w-16 h-16 bg-gradient-to-br from-primary to-cyber-purple rounded-xl shadow-lg" />
+    )}
+    <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+    <Maximize2 size={20} className="text-white" />
+    </div>
+    </div>
 
-            <div className="min-w-0">
-              <h3
-                onClick={onExpand}
-                className="text-white font-semibold truncate cursor-pointer hover:text-primary transition"
-              >
-                {title}
-              </h3>
-              <p
-                onClick={onArtistClick}
-                className="text-sm text-[var(--text-secondary)] hover:text-white cursor-pointer transition truncate"
-              >
-                {artistNames}
-              </p>
-            </div>
+    <div className="min-w-0">
+    <h3
+    onClick={onExpand}
+    className="text-white font-semibold truncate cursor-pointer hover:text-primary transition"
+    >
+    {title}
+    </h3>
+    <p
+    onClick={onArtistClick}
+    className="text-sm text-white/50 hover:text-white cursor-pointer transition truncate"
+    >
+    {artistNames}
+    </p>
+    </div>
 
-            <button
-              onClick={onLikeClick}
-              title={trackIsLiked ? "Удалить из любимых" : "Нравится"}
-              className="text-[var(--text-secondary)] hover:text-red-400 transition flex-shrink-0"
-            >
-              <Heart
-                size={20}
-                className={trackIsLiked ? "fill-red-500 text-red-500" : ""}
-              />
-            </button>
-          </div>
+    <button
+    onClick={onLikeClick}
+    title={trackIsLiked ? "Удалить из любимых" : "Нравится"}
+    className="text-white/40 hover:text-red-400 transition flex-shrink-0"
+    >
+    <Heart
+    size={20}
+    className={trackIsLiked ? "fill-red-500 text-red-500" : ""}
+    />
+    </button>
+    </div>
 
-          <div className="flex flex-col items-center space-y-2 flex-1">
-            <PlaybackControls
-              isPlaying={isPlaying}
-              loading={loading}
-              repeat={repeat}
-              shuffle={shuffle}
-              onPlayPause={onPlayPause}
-              onNext={onNext}
-              onPrev={onPrev}
-              onRepeatToggle={onRepeatToggle}
-              onShuffleToggle={onShuffleToggle}
-            />
+    <div className="flex flex-col items-center space-y-2 flex-1">
+    <PlaybackControls
+    isPlaying={isPlaying}
+    loading={loading}
+    repeat={repeat}
+    shuffle={shuffle}
+    onPlayPause={onPlayPause}
+    onNext={onNext}
+    onPrev={onPrev}
+    onRepeatToggle={onRepeatToggle}
+    onShuffleToggle={onShuffleToggle}
+    />
 
-            <ProgressBar
-              currentTime={currentTime}
-              duration={duration}
-              onSeek={onSeek}
-              maxWidth="max-w-2xl"
-            />
-          </div>
+    <ProgressBar
+    currentTime={currentTime}
+    duration={duration}
+    onSeek={onSeek}
+    maxWidth="max-w-2xl"
+    />
+    </div>
 
-          <div className="flex items-center space-x-4 flex-1 justify-end">
-            <button
-              disabled={!hasPlain}
-              onClick={onOpenPlainLyrics}
-              title={hasPlain ? "Текст песни" : "Текст недоступен"}
-              className={`transition ${
-                hasPlain
-                  ? "text-[var(--text-secondary)] hover:text-white"
-                  : "text-white/20 cursor-not-allowed"
-              }`}
-            >
-              <FileText size={20} />
-            </button>
+    <div className="flex items-center space-x-4 flex-1 justify-end">
+    <button
+    disabled={!hasPlain}
+    onClick={onOpenPlainLyrics}
+    title={hasPlain ? "Текст песни" : "Текст недоступен"}
+    className={`transition ${
+      hasPlain
+      ? "text-white/50 hover:text-white"
+      : "text-white/20 cursor-not-allowed"
+    }`}
+    >
+    <FileText size={20} />
+    </button>
 
-            <button
-              disabled={!hasSynced}
-              onClick={onOpenKaraokeLyrics}
-              title={hasSynced ? "Караоке (официальный Яндекс)" : "Караоке недоступно"}
-              className={`transition ${
-                hasSynced
-                  ? "text-[var(--text-secondary)] hover:text-white"
-                  : "text-white/20 cursor-not-allowed"
-              }`}
-            >
-              <Mic2 size={20} />
-            </button>
+    <button
+    disabled={!hasSynced}
+    onClick={onOpenKaraokeLyrics}
+    title={hasSynced ? "Караоке (официальный Яндекс)" : "Караоке недоступно"}
+    className={`transition ${
+      hasSynced
+      ? "text-white/50 hover:text-white"
+      : "text-white/20 cursor-not-allowed"
+    }`}
+    >
+    <Mic2 size={20} />
+    </button>
 
-            <VolumeSlider
-              volume={volume}
-              onVolumeChange={onVolumeChange}
-              isDraggingRef={isDraggingRef}
-            />
-          </div>
-        </div>
-      </div>
+    <VolumeSlider
+    volume={volume}
+    onVolumeChange={onVolumeChange}
+    isDraggingRef={isDraggingRef}
+    />
+    </div>
+    </div>
+    </div>
     </div>
   );
 }

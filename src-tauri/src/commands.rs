@@ -23,19 +23,19 @@ pub async fn open_auth_window(app: tauri::AppHandle) -> Result<(), String> {
 
         if url_str.contains("access_token=") {
             let token_opt = url_str.split('#').nth(1)
-                .and_then(|fragment| {
-                    fragment.split('&')
-                        .find(|param| param.starts_with("access_token="))
-                        .map(|param| param.trim_start_matches("access_token=").to_string())
+            .and_then(|fragment| {
+                fragment.split('&')
+                .find(|param| param.starts_with("access_token="))
+                .map(|param| param.trim_start_matches("access_token=").to_string())
+            })
+            .or_else(|| {
+                url_str.split('?').nth(1)
+                .and_then(|query| {
+                    query.split('&')
+                    .find(|param| param.starts_with("access_token="))
+                    .map(|param| param.trim_start_matches("access_token=").to_string())
                 })
-                .or_else(|| {
-                    url_str.split('?').nth(1)
-                        .and_then(|query| {
-                            query.split('&')
-                                .find(|param| param.starts_with("access_token="))
-                                .map(|param| param.trim_start_matches("access_token=").to_string())
-                        })
-                });
+            });
 
             if let Some(token) = token_opt {
                 let app_clone = app_handle.clone();
@@ -51,7 +51,7 @@ pub async fn open_auth_window(app: tauri::AppHandle) -> Result<(), String> {
 
                     let config = YandexConfig {
                         access_token: Some(token.clone()),
-                        user_id: user_id.clone(),
+                                            user_id: user_id.clone(),
                     };
 
                     if save_config(&config).is_ok() {
@@ -109,9 +109,37 @@ pub async fn get_account_info(state: State<'_, AppState>) -> Result<serde_json::
         config.access_token.clone().ok_or("Not authenticated")?
     };
 
-    let client = YandexApiClient::new(token);
-    let account = client.get_account_status().await?;
-    serde_json::to_value(account).map_err(|e| format!("Serialization failed: {}", e))
+    let client = reqwest::Client::new();
+    if let Ok(resp) = client.get("https://login.yandex.ru/info?format=json")
+        .header("Authorization", format!("OAuth {}", token))
+        .send()
+        .await
+        {
+            if let Ok(mut json) = resp.json::<serde_json::Value>().await {
+                if let Some(avatar_id) = json["default_avatar_id"].as_str() {
+                    if !avatar_id.is_empty() {
+                        json["avatarUrl"] = serde_json::Value::String(format!(
+                            "https://avatars.yandex.net/get-yapic/{}/islands-200",
+                            avatar_id
+                        ));
+                    }
+                }
+                if json.get("uid").is_none() {
+                    json["uid"] = json.get("id").cloned().unwrap_or(serde_json::Value::Null);
+                }
+                if json.get("displayName").is_none() {
+                    json["displayName"] = json.get("display_name").cloned()
+                    .or_else(|| json.get("real_name").cloned())
+                    .or_else(|| json.get("login").cloned())
+                    .unwrap_or(serde_json::Value::Null);
+                }
+                return Ok(json);
+            }
+        }
+
+        let api_client = YandexApiClient::new(token);
+        let account = api_client.get_account_status().await?;
+        serde_json::to_value(account).map_err(|e| format!("Serialization failed: {}", e))
 }
 
 #[tauri::command]
@@ -134,9 +162,9 @@ pub async fn get_liked_track_ids(state: State<'_, AppState>) -> Result<Vec<Strin
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -150,9 +178,9 @@ pub async fn get_liked_tracks(state: State<'_, AppState>) -> Result<serde_json::
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -167,9 +195,9 @@ pub async fn get_playlists(state: State<'_, AppState>) -> Result<serde_json::Val
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -204,7 +232,7 @@ pub async fn start_wave_session(state: State<'_, AppState>) -> Result<serde_json
         let mut rotor_session = state.rotor_session.lock().unwrap();
         *rotor_session = Some(crate::RotorSession {
             session_id: session_response.radio_session_id.clone(),
-            batch_id: session_response.batch_id.clone(),
+                              batch_id: session_response.batch_id.clone(),
         });
     }
 
@@ -264,9 +292,9 @@ pub async fn like_track(track_id: String, state: State<'_, AppState>) -> Result<
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -280,9 +308,9 @@ pub async fn unlike_track(track_id: String, state: State<'_, AppState>) -> Resul
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -342,9 +370,9 @@ pub async fn get_playlist_tracks(kind: u64, state: State<'_, AppState>) -> Resul
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -359,9 +387,9 @@ pub async fn toggle_like_track(track_id: String, state: State<'_, AppState>) -> 
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 
@@ -383,9 +411,9 @@ pub async fn check_is_liked(track_id: String, state: State<'_, AppState>) -> Res
         let config = state.config.lock().unwrap();
         let token = config.access_token.clone().ok_or("Not authenticated")?;
         let uid = config.user_id.as_ref()
-            .ok_or("User ID not found")?
-            .parse::<u64>()
-            .map_err(|e| format!("Invalid user ID: {}", e))?;
+        .ok_or("User ID not found")?
+        .parse::<u64>()
+        .map_err(|e| format!("Invalid user ID: {}", e))?;
         (token, uid)
     };
 

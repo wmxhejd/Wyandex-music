@@ -20,7 +20,7 @@ export default function LikedTracksView({ onPlayTrack }: LikedTracksViewProps) {
 
   const loadTracks = async () => {
     try {
-      const likedTracks = await invoke<Track[]>('get_liked_tracks');
+      const likedTracks = await invoke<Track[]>("get_liked_tracks");
       setTracks(likedTracks);
     } catch (err) {
       console.error("Failed to load liked tracks:", err);
@@ -29,34 +29,31 @@ export default function LikedTracksView({ onPlayTrack }: LikedTracksViewProps) {
     }
   };
 
-  // Filter tracks to only show ones that are still liked
-  const likedTracks = tracks.filter(t => likedIds.has(String(t.id)));
+  const likedTracks = tracks.filter((t) => likedIds.has(String(t.id)));
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="glass rounded-2xl p-8">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
+      <div className="flex items-center justify-center py-32">
+      <div className="w-12 h-12 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="glass-strong rounded-2xl p-8">
-        <div className="flex items-center space-x-4">
-          <div className="bg-gradient-to-br from-red-500 to-pink-600 p-4 rounded-2xl">
-            <Heart size={32} className="text-white" fill="currentColor" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-white">Любимые треки</h1>
-            <p className="text-[var(--text-secondary)]">{likedIds.size} треков</p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-8 max-w-5xl select-none">
+    <div className="flex items-center space-x-6">
+    <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-rose-600 to-red-500 flex items-center justify-center shadow-[0_0_35px_rgba(244,63,94,0.45)]">
+    <Heart size={32} className="text-white fill-white" />
+    </div>
+    <div>
+    <h1 className="text-4xl font-black text-white tracking-tight [text-shadow:_0_4px_20px_rgba(0,0,0,0.8)]">
+    Любимые треки
+    </h1>
+    <p className="text-sm text-white/50 mt-1 font-medium">{likedIds.size} треков</p>
+    </div>
+    </div>
 
-      <TrackList tracks={likedTracks} onPlayTrack={onPlayTrack} />
+    <TrackList tracks={likedTracks} onPlayTrack={onPlayTrack} />
     </div>
   );
 }

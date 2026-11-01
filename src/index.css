@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0e0e12;
-  --bg-secondary: #14141a;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-hover: rgba(255, 255, 255, 0.12);
+  --bg-primary: #07070a;
   --text-primary: #ffffff;
-  --text-secondary: #8e8e9e;
   --accent-primary: #ffcc00;
+}
+
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
 }
 
 body {
@@ -18,37 +25,6 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
-  transition: background 0.2s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-.glass {
-  background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-strong {
-  background: rgba(18, 18, 22, 0.85);
-  backdrop-filter: blur(28px);
-  border: 1px solid var(--border-subtle);
 }
 
 @keyframes aura-float-1 {

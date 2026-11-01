@@ -57,7 +57,7 @@ export default function CoverOverlay({
       <div className="flex justify-end items-center relative">
         <button
           onClick={() => setShowMoreMenu(!showMoreMenu)}
-          className="p-3 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10"
+          className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
         >
           <MoreHorizontal size={20} />
         </button>
@@ -81,23 +81,23 @@ export default function CoverOverlay({
       <div className="flex items-center justify-center space-x-6">
         <button
           onClick={onPrev}
-          className="p-3.5 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10"
+          className="w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
         >
           <SkipBack size={24} fill="currentColor" />
         </button>
         <button
           onClick={onPlayPause}
-          className="p-5 rounded-full bg-[#ffcc00] hover:scale-110 text-black shadow-2xl transition"
+          className="w-16 h-16 rounded-full bg-[#ffcc00] hover:scale-110 active:scale-95 text-black shadow-2xl transition flex items-center justify-center flex-shrink-0"
         >
           {isPlaying ? (
             <Pause size={28} fill="currentColor" />
           ) : (
-            <Play size={28} fill="currentColor" className="ml-1" />
+            <Play size={28} fill="currentColor" className="translate-x-0.5" />
           )}
         </button>
         <button
           onClick={onNext}
-          className="p-3.5 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10"
+          className="w-12 h-12 rounded-full bg-black/60 hover:bg-black/90 text-white transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
         >
           <SkipForward size={24} fill="currentColor" />
         </button>
@@ -106,7 +106,7 @@ export default function CoverOverlay({
       <div className="flex items-center justify-between">
         <button
           onClick={onLikeClick}
-          className="p-3 rounded-full bg-black/60 hover:bg-black/90 transition hover:scale-110 shadow-lg border border-white/10"
+          className="w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
         >
           <Heart
             size={20}
@@ -118,7 +118,7 @@ export default function CoverOverlay({
           disabled={!hasLyrics && !showLyricsColumn}
           onClick={onToggleLyricsColumn}
           title={showLyricsColumn ? "Скрыть текст" : !hasLyrics ? "Текст недоступен" : "Показать текст"}
-          className={`p-3.5 rounded-full transition-all hover:scale-110 shadow-lg border ${
+          className={`w-11 h-11 rounded-full transition-all hover:scale-110 shadow-lg border flex items-center justify-center flex-shrink-0 ${
             showLyricsColumn
               ? "bg-[#ffcc00] text-black border-[#ffcc00] shadow-[0_0_15px_rgba(255,204,0,0.4)]"
               : hasLyrics
@@ -131,7 +131,7 @@ export default function CoverOverlay({
 
         <button
           onClick={onRepeatToggle}
-          className={`p-3 rounded-full transition hover:scale-110 shadow-lg border border-white/10 ${
+          className={`w-10 h-10 rounded-full transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0 ${
             repeat
               ? "bg-primary/30 text-primary border-primary ring-2 ring-primary/40 shadow-[0_0_15px_rgba(255,204,0,0.4)]"
               : "bg-black/60 text-white/70 hover:text-white"

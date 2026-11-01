@@ -43,14 +43,14 @@ export default function PlaybackControls({
         onClick={onPlayPause}
         disabled={loading}
         title={isPlaying ? "Пауза" : "Воспроизведение"}
-        className="bg-white text-black p-3 rounded-full hover:scale-110 transition-transform disabled:opacity-50"
+        className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 flex-shrink-0"
       >
         {loading ? (
-          <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
         ) : isPlaying ? (
-          <Pause size={24} fill="currentColor" />
+          <Pause size={22} fill="currentColor" />
         ) : (
-          <Play size={24} fill="currentColor" className="ml-0.5" />
+          <Play size={22} fill="currentColor" className="translate-x-0.5" />
         )}
       </button>
       <button

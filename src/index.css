@@ -50,3 +50,33 @@ body {
   backdrop-filter: blur(28px);
   border: 1px solid var(--border-subtle);
 }
+
+@keyframes aura-float-1 {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+  33% {
+    transform: translate(-47%, -53%) rotate(120deg) scale(1.08);
+  }
+  66% {
+    transform: translate(-53%, -47%) rotate(240deg) scale(0.95);
+  }
+}
+
+@keyframes aura-float-2 {
+  0%, 100% {
+    transform: translate(-50%, -50%) rotate(360deg) scale(0.96);
+  }
+  50% {
+    transform: translate(-48%, -48%) rotate(180deg) scale(1.1);
+  }
+}
+
+@keyframes marquee-pingpong {
+  0%, 25% {
+    transform: translateX(0px);
+  }
+  75%, 100% {
+    transform: translateX(var(--scroll-dist, 0px));
+  }
+}

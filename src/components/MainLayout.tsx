@@ -8,7 +8,7 @@ import PlaylistsView from "./PlaylistsView";
 import SearchView from "./SearchView";
 import ArtistView from "./ArtistView";
 import AlbumView from "./AlbumView";
-import Player from "./Player";
+import Player, { PlayerHandle } from "./Player";
 import WindowControls from "./player/WindowControls";
 import { Track } from "../types";
 
@@ -27,16 +27,26 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   const [waveQueue, setWaveQueue] = useState<Track[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(() => {
+    const saved = localStorage.getItem("wyandexmusic_volume") || localStorage.getItem("yandexarbuz_volume");
+    return saved ? parseInt(saved, 10) : 80;
+  });
+
   const [isWaveMode, setIsWaveMode] = useState(false);
   const [selectedArtistId, setSelectedArtistId] = useState<number | null>(null);
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null);
 
+  const isDraggingVolRef = useRef(false);
   const isFetchingWaveRef = useRef(false);
   const sessionSeenIdsRef = useRef<Set<string>>(new Set());
   const [isDirectClick, setIsDirectClick] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [waveLoading, setWaveLoading] = useState(false);
   const [waveError, setWaveError] = useState("");
+  const playerRef = useRef<PlayerHandle | null>(null);
 
   const queueRef = useRef(queue);
   queueRef.current = queue;
@@ -48,6 +58,52 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   currentTrackRef.current = currentTrack;
   const shuffleRef = useRef(shuffle);
   shuffleRef.current = shuffle;
+  const repeatRef = useRef(repeat);
+  repeatRef.current = repeat;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTime = () => {
+      setCurrentTime(audio.currentTime);
+      const d = audio.duration;
+      if (!isNaN(d) && d > 0) {
+        setDuration(d);
+      } else if (currentTrackRef.current) {
+        setDuration(currentTrackRef.current.durationMs / 1000);
+      }
+    };
+
+    const handleEnd = () => {
+      if (repeatRef.current) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      } else {
+        handleNextTrack(false);
+      }
+    };
+
+    const handleVol = () => {
+      if (isDraggingVolRef.current) return;
+      const linearVal = Math.round(Math.cbrt(audio.volume) * 100);
+      const clampedVal = Math.min(100, Math.max(0, linearVal));
+      setVolume(clampedVal);
+      localStorage.setItem("wyandexmusic_volume", String(clampedVal));
+    };
+
+    audio.addEventListener("timeupdate", handleTime);
+    audio.addEventListener("loadedmetadata", handleTime);
+    audio.addEventListener("ended", handleEnd);
+    audio.addEventListener("volumechange", handleVol);
+
+    return () => {
+      audio.removeEventListener("timeupdate", handleTime);
+      audio.removeEventListener("loadedmetadata", handleTime);
+      audio.removeEventListener("ended", handleEnd);
+      audio.removeEventListener("volumechange", handleVol);
+    };
+  }, []);
 
   const replenishWaveQueue = useCallback((activeQueue: Track[], activeIndex: number, track: Track) => {
     if (!isWaveModeRef.current || isFetchingWaveRef.current) return;
@@ -128,6 +184,15 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     }
   };
 
+  const handlePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
   const handleNextTrack = useCallback((isManual = true) => {
     const currentQ = queueRef.current;
     const currentIdx = queueIndexRef.current;
@@ -201,6 +266,23 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     setIsPlaying(true);
   }, []);
 
+  const handleSeekSeconds = (secs: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = secs;
+      setCurrentTime(secs);
+    }
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = Number(e.target.value);
+    const norm = val / 100;
+    setVolume(val);
+    localStorage.setItem("wyandexmusic_volume", String(val));
+    if (audioRef.current) {
+      audioRef.current.volume = Math.pow(norm, 3);
+    }
+  };
+
   useEffect(() => {
     const unlistenPlayPause = listen("tray-play-pause", () => {
       if (audioRef.current) {
@@ -245,7 +327,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   };
 
   return (
-    <div className="flex h-screen bg-[#0e0e12] overflow-hidden select-none">
+    <div className="flex h-screen bg-[#07070a] overflow-hidden select-none relative">
       <audio
         ref={audioRef}
         id="main-audio"
@@ -260,50 +342,85 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
         onSearch={handleSearch}
       />
 
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#121216] relative">
-        <div data-tauri-drag-region className="h-10 flex-shrink-0 flex items-center justify-end px-3">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        <div className="absolute top-2.5 right-3.5 z-40 flex items-center pointer-events-auto">
           <WindowControls />
         </div>
 
-        <main className="flex-1 overflow-y-auto px-8 pb-8">
+        <div data-tauri-drag-region className="absolute top-0 left-0 right-16 h-10 z-30" />
+
+        <main className="flex-1 overflow-y-auto relative w-full h-full">
           {currentView === "wave" && (
             <WaveView
               queue={waveQueue}
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              duration={duration}
+              volume={volume}
+              repeat={repeat}
+              shuffle={shuffle}
               onPlayTrack={(track, tracks) => handlePlayTrack(track, tracks, true)}
+              onPlayPause={handlePlayPause}
+              onNextTrack={handleNextTrack}
+              onPrevTrack={handlePrevTrack}
+              onSeek={handleSeekSeconds}
+              onVolumeChange={handleVolumeChange}
+              onIsDraggingVol={(d) => { isDraggingVolRef.current = d; }}
+              onRepeatToggle={() => setRepeat(!repeat)}
+              onShuffleToggle={() => setShuffle(!shuffle)}
+              onOpenLyrics={() => playerRef.current?.openLyrics()}
+              onOpenExpanded={() => playerRef.current?.openExpanded()}
               isLoading={waveLoading}
               error={waveError}
               onRetry={startWaveSession}
+              onArtistClick={handleArtistClick}
             />
           )}
-          {currentView === "liked" && <LikedTracksView onPlayTrack={handlePlayTrack} />}
-          {currentView === "playlists" && <PlaylistsView onPlayTrack={handlePlayTrack} />}
+          {currentView === "liked" && (
+            <div className="p-8 pt-12">
+              <LikedTracksView onPlayTrack={handlePlayTrack} />
+            </div>
+          )}
+          {currentView === "playlists" && (
+            <div className="p-8 pt-12">
+              <PlaylistsView onPlayTrack={handlePlayTrack} />
+            </div>
+          )}
           {currentView === "search" && (
-            <SearchView
-              query={searchQuery}
-              onPlayTrack={handlePlayTrack}
-              onArtistClick={handleArtistClick}
-              onAlbumClick={handleAlbumClick}
-            />
+            <div className="p-8 pt-12">
+              <SearchView
+                query={searchQuery}
+                onPlayTrack={handlePlayTrack}
+                onArtistClick={handleArtistClick}
+                onAlbumClick={handleAlbumClick}
+              />
+            </div>
           )}
           {currentView === "artist" && selectedArtistId && (
-            <ArtistView
-              artistId={selectedArtistId}
-              onBack={() => setCurrentView("search")}
-              onPlayTrack={handlePlayTrack}
-              onAlbumClick={handleAlbumClick}
-            />
+            <div className="p-8 pt-12">
+              <ArtistView
+                artistId={selectedArtistId}
+                onBack={() => setCurrentView("search")}
+                onPlayTrack={handlePlayTrack}
+                onAlbumClick={handleAlbumClick}
+              />
+            </div>
           )}
           {currentView === "album" && selectedAlbumId && (
-            <AlbumView
-              albumId={selectedAlbumId}
-              onBack={() => setCurrentView("search")}
-              onPlayTrack={handlePlayTrack}
-              onArtistClick={handleArtistClick}
-            />
+            <div className="p-8 pt-12">
+              <AlbumView
+                albumId={selectedAlbumId}
+                onBack={() => setCurrentView("search")}
+                onPlayTrack={handlePlayTrack}
+                onArtistClick={handleArtistClick}
+              />
+            </div>
           )}
         </main>
 
         <Player
+          ref={playerRef}
           track={currentTrack}
           isPlaying={isPlaying}
           setIsPlaying={setIsPlaying}
@@ -314,6 +431,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
           isDirectClick={isDirectClick}
           audioRef={audioRef}
           onArtistClick={handleArtistClick}
+          hideBottomBar={currentView === "wave"}
         />
       </div>
     </div>

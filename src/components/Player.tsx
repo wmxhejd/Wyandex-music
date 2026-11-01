@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
 import { useLikes } from "../context/LikesContext";
@@ -18,6 +18,7 @@ interface PlayerProps {
   isDirectClick?: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   onArtistClick?: (artistId: number) => void;
+  hideBottomBar?: boolean;
 }
 
 interface LyricsData {
@@ -26,7 +27,12 @@ interface LyricsData {
   providers?: ProviderItem[];
 }
 
-export default function Player({
+export interface PlayerHandle {
+  openLyrics: () => void;
+  openExpanded: () => void;
+}
+
+const Player = forwardRef<PlayerHandle, PlayerProps>(({
   track,
   isPlaying,
   onNextTrack,
@@ -36,7 +42,8 @@ export default function Player({
   isDirectClick = false,
   audioRef,
   onArtistClick,
-}: PlayerProps) {
+  hideBottomBar = false,
+}, ref) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => {
@@ -62,6 +69,17 @@ export default function Player({
   const { isLiked, toggleLike } = useLikes();
 
   const trackIsLiked = track ? isLiked(track.id) : false;
+
+  useImperativeHandle(ref, () => ({
+    openLyrics: () => {
+      setIsExpanded(true);
+      setShowLyricsColumn(true);
+    },
+    openExpanded: () => {
+      setIsExpanded(true);
+      setShowLyricsColumn(false);
+    },
+  }));
 
   const currentLyrics = useMemo(() => {
     if (!lyricsData) return { plainLyrics: null, syncedLyrics: null };
@@ -361,13 +379,6 @@ export default function Player({
     }
   };
 
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const getCoverUrl = (coverUri?: string) => {
     if (!coverUri) return undefined;
     return `https://${coverUri.replace("%%", "600x600")}`;
@@ -448,52 +459,56 @@ export default function Player({
         />
       )}
 
-      <BottomBar
-        title={track.title}
-        artistNames={artistNames}
-        coverUrl={coverUrl}
-        trackIsLiked={trackIsLiked}
-        isPlaying={isPlaying}
-        loading={loading}
-        repeat={repeat}
-        shuffle={shuffle}
-        currentTime={currentTime}
-        duration={duration}
-        volume={volume}
-        hasPlain={hasPlain}
-        hasSynced={hasSynced}
-        isDraggingRef={isDraggingRef}
-        onExpand={() => {
-          setIsExpanded(true);
-          setShowLyricsColumn(false);
-        }}
-        onArtistClick={handleArtistClickAction}
-        onLikeClick={handleLikeClick}
-        onShuffleToggle={onShuffleToggle}
-        onPrev={handlePrevious}
-        onPlayPause={() => {
-          if (!audioRef.current) return;
-          if (isPlaying) {
-            audioRef.current.pause();
-          } else {
-            audioRef.current.play().catch(() => {});
-          }
-        }}
-        onNext={() => onNextTrack(true)}
-        onRepeatToggle={() => setRepeat(!repeat)}
-        onSeek={handleSeek}
-        onOpenPlainLyrics={() => {
-          setLyricsMode("plain");
-          setShowLyricsColumn(true);
-          setIsExpanded(true);
-        }}
-        onOpenKaraokeLyrics={() => {
-          setLyricsMode("karaoke");
-          setShowLyricsColumn(true);
-          setIsExpanded(true);
-        }}
-        onVolumeChange={handleVolumeChange}
-      />
+      {!hideBottomBar && (
+        <BottomBar
+          title={track.title}
+          artistNames={artistNames}
+          coverUrl={coverUrl}
+          trackIsLiked={trackIsLiked}
+          isPlaying={isPlaying}
+          loading={loading}
+          repeat={repeat}
+          shuffle={shuffle}
+          currentTime={currentTime}
+          duration={duration}
+          volume={volume}
+          hasPlain={hasPlain}
+          hasSynced={hasSynced}
+          isDraggingRef={isDraggingRef}
+          onExpand={() => {
+            setIsExpanded(true);
+            setShowLyricsColumn(false);
+          }}
+          onArtistClick={handleArtistClickAction}
+          onLikeClick={handleLikeClick}
+          onShuffleToggle={onShuffleToggle}
+          onPrev={handlePrevious}
+          onPlayPause={() => {
+            if (!audioRef.current) return;
+            if (isPlaying) {
+              audioRef.current.pause();
+            } else {
+              audioRef.current.play().catch(() => {});
+            }
+          }}
+          onNext={() => onNextTrack(true)}
+          onRepeatToggle={() => setRepeat(!repeat)}
+          onSeek={handleSeek}
+          onOpenPlainLyrics={() => {
+            setLyricsMode("plain");
+            setShowLyricsColumn(true);
+            setIsExpanded(true);
+          }}
+          onOpenKaraokeLyrics={() => {
+            setLyricsMode("karaoke");
+            setShowLyricsColumn(true);
+            setIsExpanded(true);
+          }}
+          onVolumeChange={handleVolumeChange}
+        />
+      )}
     </>
   );
-}
+});
+
+export default Player;

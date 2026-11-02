@@ -55,9 +55,12 @@ pub fn run() {
         .item(&quit_item)
         .build()?;
 
+        let tray_icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))
+        .unwrap_or_else(|_| app.default_window_icon().unwrap().clone());
+
         let _tray = TrayIconBuilder::new()
         .menu(&menu)
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(tray_icon)
         .tooltip("Wyandexmusic")
         .on_menu_event(move |app, event| {
             match event.id().as_ref() {

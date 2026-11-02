@@ -5,6 +5,12 @@ dist-ssr/
 src-tauri/target/
 **/target/
 
+*.AppImage
+*.deb
+*.rpm
+*.tar.gz
+wyandexmusic
+
 .env
 .env.*
 !.env.example
@@ -23,6 +29,8 @@ pnpm-debug.log*
 *.sln
 *.sw?
 *~
+*.bak
+*.tmp
 
 .DS_Store
 Thumbs.db

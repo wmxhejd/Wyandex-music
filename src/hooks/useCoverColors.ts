@@ -78,7 +78,7 @@ export function useCoverColors(coverUrl?: string, trackSeed = "default") {
           const a = data[i + 3];
           if (a < 128) continue;
 
-          const [h, s, l] = rgbToHsl(r, g, b);
+          const [, s, l] = rgbToHsl(r, g, b);
 
           if (l >= 20 && l <= 85 && s >= 25) {
             const score = (s * 2.2) + (50 - Math.abs(l - 55));

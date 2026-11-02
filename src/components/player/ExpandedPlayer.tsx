@@ -89,25 +89,9 @@ export default function ExpandedPlayer({
 }: ExpandedPlayerProps) {
   const colors = useCoverColors(coverUrl, `${title}-${artistNames}`);
 
-  const [masterEnabled, setMasterEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem("wyandexmusic_aura_master_enabled");
-    return saved !== null ? saved === "true" : true;
-  });
-
   const [masterBrightness, setMasterBrightness] = useState<number>(() => {
     const saved = localStorage.getItem("wyandexmusic_aura_brightness");
     return saved !== null ? parseInt(saved, 10) : 100;
-  });
-
-  const [expandedConfig, setExpandedConfig] = useState<{ enabled: boolean; brightness: number }>(() => {
-    const saved = localStorage.getItem("wyandexmusic_tab_glow_configs");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.expanded) return parsed.expanded;
-      } catch {}
-    }
-    return { enabled: true, brightness: 100 };
   });
 
   const [transitionDuration, setTransitionDuration] = useState<number>(() => {
@@ -122,29 +106,17 @@ export default function ExpandedPlayer({
 
   useEffect(() => {
     const update = () => {
-      const e = localStorage.getItem("wyandexmusic_aura_master_enabled");
-      if (e !== null) setMasterEnabled(e === "true");
       const b = localStorage.getItem("wyandexmusic_aura_brightness");
       if (b !== null) setMasterBrightness(parseInt(b, 10));
       const t = localStorage.getItem("wyandexmusic_aura_transition");
       if (t !== null) setTransitionDuration(parseFloat(t));
       const s = localStorage.getItem("wyandexmusic_aura_anim_speed");
       if (s !== null) setAnimSpeed(parseFloat(s));
-      const cfgs = localStorage.getItem("wyandexmusic_tab_glow_configs");
-      if (cfgs) {
-        try {
-          const parsed = JSON.parse(cfgs);
-          if (parsed.expanded) setExpandedConfig(parsed.expanded);
-        } catch {}
-      }
     };
 
-    window.addEventListener("aura-settings-updated", update);
-    return () => window.removeEventListener("aura-settings-updated", update);
+      window.addEventListener("aura-settings-updated", update);
+      return () => window.removeEventListener("aura-settings-updated", update);
   }, []);
-
-  const isGlowActive = masterEnabled && expandedConfig.enabled;
-  const effectiveBrightness = Math.round(masterBrightness * (expandedConfig.brightness / 100));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-[#07070a] overflow-hidden select-none animate-in fade-in duration-200">
@@ -152,8 +124,7 @@ export default function ExpandedPlayer({
     colors={colors}
     isPlaying={isPlaying}
     position={showLyricsColumn ? "left" : "center"}
-    brightness={effectiveBrightness}
-    enabled={isGlowActive}
+    brightness={masterBrightness}
     transitionDuration={transitionDuration}
     animSpeed={animSpeed}
     />
@@ -166,7 +137,6 @@ export default function ExpandedPlayer({
     <button
     onClick={onClose}
     className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all transform hover:scale-105 active:scale-95"
-    title="Свернуть плеер"
     >
     <ChevronDown size={18} />
     </button>
@@ -254,20 +224,22 @@ export default function ExpandedPlayer({
       onLineClick={onLineClick}
       />
     ) : plainLyrics ? (
-      <div className="m-auto max-w-2xl py-10">
-      <div className="space-y-4 text-center">
-      {plainLyrics.split("\n\n").map((verse, vIdx) => (
-        <div key={vIdx} className="space-y-1.5 py-2">
-        {verse.split("\n").map((line, lIdx) => (
+      <div className="m-auto max-w-2xl py-10 w-full">
+      <div className="space-y-2 text-center">
+      {plainLyrics.split(/\r?\n/).map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return <div key={idx} className="h-4" />;
+        }
+        return (
           <p
-          key={lIdx}
+          key={idx}
           className="text-xl md:text-2xl text-white font-medium tracking-wide leading-relaxed"
           >
-          {line}
+          {trimmed}
           </p>
-        ))}
-        </div>
-      ))}
+        );
+      })}
       </div>
       </div>
     ) : (

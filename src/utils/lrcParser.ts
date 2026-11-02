@@ -4,49 +4,69 @@ export interface LyricLine {
 }
 
 export function parseLrc(lrcText: string): LyricLine[] {
-  const lines = lrcText.split("\n");
+  if (!lrcText || !lrcText.trim()) return [];
+
+  const lines = lrcText.split(/\r?\n/);
   const result: LyricLine[] = [];
-  let fileOffsetMs = 0;
+  let fileOffset = 0;
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("[offset:")) {
-      const match = trimmed.match(/\[offset:\s*(-?\d+)\]/i);
-      if (match) fileOffsetMs = parseInt(match[1], 10);
-    }
-  }
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
 
-  const timeRegex = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (/^\[(ar|al|ti|au|by|re|ve|length|offset):/i.test(trimmed)) {
+    const offsetMatch = line.match(/^\[offset:\s*(-?\d+)\]/i);
+    if (offsetMatch) {
+      fileOffset = parseInt(offsetMatch[1], 10) / 1000;
       continue;
     }
 
-    const text = trimmed.replace(timeRegex, "").trim();
-    let match;
-    timeRegex.lastIndex = 0;
+    if (/^\[(ar|al|ti|au|by|re|ve|length):/i.test(line)) {
+      continue;
+    }
 
-    while ((match = timeRegex.exec(trimmed)) !== null) {
+    const timestampRegex = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+    const timestamps: number[] = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = timestampRegex.exec(line)) !== null) {
       const minutes = parseInt(match[1], 10);
       const seconds = parseInt(match[2], 10);
       let millis = 0;
 
       if (match[3]) {
-        if (match[3].length === 1) millis = parseInt(match[3], 10) * 100;
-        else if (match[3].length === 2) millis = parseInt(match[3], 10) * 10;
-        else millis = parseInt(match[3].slice(0, 3), 10);
+        if (match[3].length === 1) {
+          millis = parseInt(match[3], 10) * 100;
+        } else if (match[3].length === 2) {
+          millis = parseInt(match[3], 10) * 10;
+        } else {
+          millis = parseInt(match[3].slice(0, 3), 10);
+        }
       }
 
-      let time = minutes * 60 + seconds + millis / 1000;
-      time -= fileOffsetMs / 1000;
+      const totalTime = minutes * 60 + seconds + millis / 1000 - fileOffset;
+      timestamps.push(Math.max(0, totalTime));
+    }
 
-      if (text) {
-        result.push({ time: Math.max(0, time), text });
+    const cleanText = line
+    .replace(/<[^>]+>/g, "")
+    .replace(/\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]/g, "")
+    .trim();
+
+    if (cleanText) {
+      for (const time of timestamps) {
+        result.push({ time, text: cleanText });
       }
     }
   }
 
-  return result.sort((a, b) => a.time - b.time);
+  result.sort((a, b) => a.time - b.time);
+
+  const deduplicated: LyricLine[] = [];
+  for (let i = 0; i < result.length; i++) {
+    if (i === 0 || Math.abs(result[i].time - deduplicated[deduplicated.length - 1].time) > 0.05) {
+      deduplicated.push(result[i]);
+    }
+  }
+
+  return deduplicated;
 }

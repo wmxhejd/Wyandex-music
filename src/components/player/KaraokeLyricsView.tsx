@@ -14,24 +14,28 @@ export default function KaraokeLyricsView({
   onLineClick,
 }: KaraokeLyricsViewProps) {
   return (
-    <div className="space-y-8 w-full max-w-2xl py-32 select-none">
-      {lyrics.map((line, idx) => {
-        const isActive = idx === currentLineIndex;
-        return (
-          <div
-            key={idx}
-            ref={isActive ? activeLineRef : null}
-            onClick={() => onLineClick(line.time)}
-            className={`transition-all duration-200 cursor-pointer ${
-              isActive
-                ? "text-3xl md:text-4xl font-extrabold text-white scale-105 tracking-wide drop-shadow-[0_4px_16px_rgba(255,255,255,0.4)]"
-                : "text-xl md:text-2xl font-semibold text-white/30 hover:text-white/70"
-            }`}
-          >
-            {line.text}
-          </div>
-        );
-      })}
+    <div className="space-y-6 w-full max-w-2xl py-48 select-none">
+    {lyrics.map((line, idx) => {
+      const isActive = idx === currentLineIndex;
+      const dist = Math.abs(idx - currentLineIndex);
+
+      return (
+        <div
+        key={`${idx}-${line.time}`}
+        ref={isActive ? activeLineRef : null}
+        onClick={() => onLineClick(line.time)}
+        className={`transition-colors duration-200 ease-out cursor-pointer text-2xl md:text-3xl leading-relaxed ${
+          isActive
+          ? "font-extrabold text-white [text-shadow:_0_0_24px_rgba(255,255,255,0.7)]"
+          : dist <= 2
+          ? "font-semibold text-white/40 hover:text-white/80"
+          : "font-semibold text-white/20 hover:text-white/60"
+        }`}
+        >
+        {line.text}
+        </div>
+      );
+    })}
     </div>
   );
 }

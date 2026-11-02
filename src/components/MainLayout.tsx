@@ -5,6 +5,7 @@ import Sidebar from "./Sidebar";
 import WaveView from "./WaveView";
 import LikedTracksView from "./LikedTracksView";
 import PlaylistsView from "./PlaylistsView";
+import HistoryView from "./HistoryView";
 import SearchView from "./SearchView";
 import ArtistView from "./ArtistView";
 import AlbumView from "./AlbumView";
@@ -19,7 +20,7 @@ interface MainLayoutProps {
   onLogout: () => void;
 }
 
-type View = "wave" | "liked" | "playlists" | "search" | "artist" | "album" | "settings";
+type View = "wave" | "liked" | "playlists" | "history" | "search" | "artist" | "album" | "settings";
 
 const VIEW_AURAS: Record<Exclude<View, "wave">, { c1: string; c2: string; c3: string }> = {
   liked: {
@@ -31,6 +32,11 @@ const VIEW_AURAS: Record<Exclude<View, "wave">, { c1: string; c2: string; c3: st
     c1: "#3d5afe",
     c2: "#00e5ff",
     c3: "#651fff",
+  },
+  history: {
+    c1: "#06b6d4",
+    c2: "#3b82f6",
+    c3: "#0284c7",
   },
   search: {
     c1: "#ff9100",
@@ -252,6 +258,16 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     }
   }, []);
 
+  const recordTrackToHistory = (track: Track) => {
+    try {
+      const raw = localStorage.getItem("wyandexmusic_history");
+      const list: Track[] = raw ? JSON.parse(raw) : [];
+      const filtered = list.filter((t) => String(t.id) !== String(track.id));
+      const updated = [track, ...filtered].slice(0, 100);
+      localStorage.setItem("wyandexmusic_history", JSON.stringify(updated));
+    } catch {}
+  };
+
   const startWaveSession = useCallback(async () => {
     try {
       setWaveLoading(true);
@@ -301,6 +317,8 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     setQueue(fromQueue);
     setQueueIndex(targetIndex !== -1 ? targetIndex : 0);
     setPlaybackSourceTitle(fromWave ? null : (sourceTitle || null));
+
+    recordTrackToHistory(track);
 
     if (fromWave) {
       waveTrackRef.current = track;
@@ -400,6 +418,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     setQueueIndex(nextIndex);
     setCurrentTrack(nextTrack);
     setIsPlaying(true);
+    recordTrackToHistory(nextTrack);
 
     if (isWaveModeRef.current) {
       waveIndexRef.current = nextIndex;
@@ -448,6 +467,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     setQueueIndex(prevIndex);
     setCurrentTrack(prevTrack);
     setIsPlaying(true);
+    recordTrackToHistory(prevTrack);
 
     if (isWaveModeRef.current) {
       waveIndexRef.current = prevIndex;
@@ -585,6 +605,11 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     {currentView === "playlists" && (
       <div className="p-8 pt-16 pl-80">
       <PlaylistsView onPlayTrack={(track, tracks, title) => handlePlayTrack(track, tracks, false, title)} />
+      </div>
+    )}
+    {currentView === "history" && (
+      <div className="p-8 pt-16 pl-80">
+      <HistoryView onPlayTrack={(track, tracks, title) => handlePlayTrack(track, tracks, false, title || "История")} />
       </div>
     )}
     {currentView === "search" && (

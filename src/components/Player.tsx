@@ -66,7 +66,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
 
   const [lyricsData, setLyricsData] = useState<LyricsData | null>(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string>("yandex");
+  const [selectedProvider, setSelectedProvider] = useState<string>("lrclib");
 
   const isDraggingRef = useRef(false);
   const activeRequestIdRef = useRef(0);
@@ -105,24 +105,9 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     return parseLrc(currentLyrics.syncedLyrics);
   }, [currentLyrics.syncedLyrics]);
 
-  useEffect(() => {
-    if (!isPlaying || !isExpanded || !showLyricsColumn || lyricsMode !== "karaoke") return;
-
-    let animId: number;
-    const tick = () => {
-      if (audioRef.current && !audioRef.current.paused) {
-        setCurrentTime(audioRef.current.currentTime);
-      }
-      animId = requestAnimationFrame(tick);
-    };
-
-    animId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animId);
-  }, [isPlaying, isExpanded, showLyricsColumn, lyricsMode]);
-
   const currentLineIndex = useMemo(() => {
     if (parsedLyrics.length === 0) return -1;
-    const targetTime = currentTime + 0.12;
+    const targetTime = currentTime + 0.15;
     let idx = -1;
     for (let i = 0; i < parsedLyrics.length; i++) {
       if (targetTime >= parsedLyrics[i].time) {
@@ -135,10 +120,14 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   }, [parsedLyrics, currentTime]);
 
   useEffect(() => {
-    if (isExpanded && showLyricsColumn && lyricsMode === "karaoke" && activeLineRef.current) {
-      activeLineRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
+    if (!isExpanded || !showLyricsColumn || lyricsMode !== "karaoke") return;
+    const container = lyricsContainerRef.current;
+    const activeEl = activeLineRef.current;
+    if (container && activeEl) {
+      const targetTop = activeEl.offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2;
+      container.scrollTo({
+        top: Math.max(0, targetTop),
+                         behavior: "smooth",
       });
     }
   }, [currentLineIndex, isExpanded, showLyricsColumn, lyricsMode]);
@@ -169,10 +158,15 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     .then((data) => {
       if (!isCancelled) {
         setLyricsData(data);
-        const defaultSource = data.providers?.[0]?.source || "yandex";
-        setSelectedProvider(defaultSource);
-        if (data.syncedLyrics) {
-          setLyricsMode("karaoke");
+
+        const preferred = localStorage.getItem("wyandexmusic_preferred_lyrics_provider");
+        const preferredProv = data.providers?.find((p) => p.source === preferred);
+        const syncedProv = data.providers?.find((p) => p.syncedLyrics);
+        const chosen = (preferredProv?.syncedLyrics ? preferredProv : null) || syncedProv || preferredProv || data.providers?.[0];
+
+        if (chosen) {
+          setSelectedProvider(chosen.source);
+          setLyricsMode(chosen.syncedLyrics ? "karaoke" : "plain");
         } else {
           setLyricsMode("plain");
         }

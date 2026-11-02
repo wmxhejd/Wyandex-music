@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LogOut, Sun, Image as ImageIcon, ArrowLeft, ChevronRight, Radio, Heart, ListMusic, Search, Settings as SettingsIcon, Sparkles, Activity, Gauge, Maximize2 } from "lucide-react";
+import { LogOut, Sun, Image as ImageIcon, ArrowLeft, ChevronRight, Radio, Heart, ListMusic, History, Search, Settings as SettingsIcon, Sparkles, Activity, Gauge, Maximize2, Mic2, Check } from "lucide-react";
 
 interface SettingsViewProps {
     onLogout: () => void;
@@ -18,13 +18,14 @@ interface TabGlowConfig {
     brightness: number;
 }
 
-type TabKey = "wave" | "expanded" | "liked" | "playlists" | "search" | "settings";
+type TabKey = "wave" | "expanded" | "liked" | "playlists" | "history" | "search" | "settings" | "lyrics";
 
-const DEFAULT_CONFIGS: Record<TabKey, TabGlowConfig> = {
+const DEFAULT_CONFIGS: Record<Exclude<TabKey, "lyrics">, TabGlowConfig> = {
     wave: { enabled: true, brightness: 100 },
     expanded: { enabled: true, brightness: 100 },
     liked: { enabled: true, brightness: 100 },
     playlists: { enabled: true, brightness: 100 },
+    history: { enabled: true, brightness: 100 },
     search: { enabled: true, brightness: 100 },
     settings: { enabled: true, brightness: 100 },
 };
@@ -58,14 +59,18 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         return saved !== null ? parseFloat(saved) : 1.0;
     });
 
-    const [tabConfigs, setTabConfigs] = useState<Record<TabKey, TabGlowConfig>>(() => {
+    const [preferredProvider, setPreferredProvider] = useState<string>(() => {
+        return localStorage.getItem("wyandexmusic_preferred_lyrics_provider") || "lrclib";
+    });
+
+    const [tabConfigs, setTabConfigs] = useState<Record<string, TabGlowConfig>>(() => {
         const saved = localStorage.getItem("wyandexmusic_tab_glow_configs");
         if (saved) {
             try {
                 return { ...DEFAULT_CONFIGS, ...JSON.parse(saved) };
             } catch {}
         }
-        return DEFAULT_CONFIGS;
+        return DEFAULT_CONFIGS as any;
     });
 
     useEffect(() => {
@@ -109,10 +114,16 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         window.dispatchEvent(new Event("aura-settings-updated"));
     };
 
-    const updateTabConfig = (tab: TabKey, partial: Partial<TabGlowConfig>) => {
+    const handleSelectPreferredProvider = (src: string) => {
+        setPreferredProvider(src);
+        localStorage.setItem("wyandexmusic_preferred_lyrics_provider", src);
+    };
+
+    const updateTabConfig = (tab: string, partial: Partial<TabGlowConfig>) => {
+        const current = tabConfigs[tab] || { enabled: true, brightness: 100 };
         const updated = {
             ...tabConfigs,
-            [tab]: { ...tabConfigs[tab], ...partial },
+            [tab]: { ...current, ...partial },
         };
         setTabConfigs(updated);
         localStorage.setItem("wyandexmusic_tab_glow_configs", JSON.stringify(updated));
@@ -124,16 +135,76 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
     const subpages: { key: TabKey; label: string; icon: any }[] = [
         { key: "wave", label: "Моя волна", icon: Radio },
         { key: "expanded", label: "Полноэкранный плеер", icon: Maximize2 },
+        { key: "lyrics", label: "Тексты и караоке", icon: Mic2 },
         { key: "liked", label: "Любимые треки", icon: Heart },
         { key: "playlists", label: "Плейлисты", icon: ListMusic },
+        { key: "history", label: "История", icon: History },
         { key: "search", label: "Поиск", icon: Search },
         { key: "settings", label: "Настройки", icon: SettingsIcon },
     ];
 
+    const lyricsProvidersList = [
+        { id: "lrclib", name: "LRCLIB (Основной FOSS-архив с караоке)" },
+        { id: "netease", name: "NetEase Cloud (Синхронизированные таймкоды)" },
+        { id: "kugou", name: "KuGou Music (Большая база LRC)" },
+        { id: "karalyr", name: "Karalyr (Построчные тайминги)" },
+        { id: "lyricsovh", name: "Lyrics.ovh (Текстовая база)" },
+    ];
+
+    if (currentSubpage === "lyrics") {
+        return (
+            <div className="max-w-xl space-y-8 select-none pt-4 pb-20">
+            <button
+            onClick={() => setCurrentSubpage("main")}
+            className="flex items-center space-x-2 text-white/50 hover:text-white transition-colors"
+            >
+            <ArrowLeft size={18} />
+            <span className="text-sm font-medium">Назад к настройкам</span>
+            </button>
+
+            <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center text-[#ffcc00]">
+            <Mic2 size={22} />
+            </div>
+            <div>
+            <h1 className="text-3xl font-black text-white tracking-tight">Тексты и караоке</h1>
+            <p className="text-xs text-white/40 mt-0.5">Выбор приоритетного провайдера текста</p>
+            </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-white/[0.06]">
+            <span className="text-xs uppercase tracking-wider text-white/40 font-bold block mb-2">
+            Приоритетный источник
+            </span>
+
+            <div className="space-y-2">
+            {lyricsProvidersList.map((p) => {
+                const isSelected = preferredProvider === p.id;
+                return (
+                    <div
+                    key={p.id}
+                    onClick={() => handleSelectPreferredProvider(p.id)}
+                    className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${
+                        isSelected
+                        ? "bg-white/[0.08] text-white border border-white/15"
+                        : "bg-white/[0.02] text-white/60 hover:text-white hover:bg-white/[0.04] border border-transparent"
+                    }`}
+                    >
+                    <span className="text-sm font-semibold">{p.name}</span>
+                    {isSelected && <Check size={18} className="text-[#ffcc00]" />}
+                    </div>
+                );
+            })}
+            </div>
+            </div>
+            </div>
+        );
+    }
+
     if (currentSubpage !== "main") {
         const activeInfo = subpages.find((s) => s.key === currentSubpage)!;
         const Icon = activeInfo.icon;
-        const currentCfg = tabConfigs[currentSubpage] || DEFAULT_CONFIGS[currentSubpage];
+        const currentCfg = tabConfigs[currentSubpage] || { enabled: true, brightness: 100 };
 
         return (
             <div className="max-w-xl space-y-8 select-none pt-4 pb-20">

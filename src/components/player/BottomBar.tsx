@@ -68,7 +68,6 @@ export default function BottomBar({
     <div
     onClick={onExpand}
     className="relative group cursor-pointer flex-shrink-0"
-    title="Развернуть полноэкранный плеер"
     >
     {coverUrl ? (
       <img
@@ -101,7 +100,6 @@ export default function BottomBar({
 
     <button
     onClick={onLikeClick}
-    title={trackIsLiked ? "Удалить из любимых" : "Нравится"}
     className="text-white/40 hover:text-red-400 transition flex-shrink-0"
     >
     <Heart
@@ -136,7 +134,6 @@ export default function BottomBar({
     <button
     disabled={!hasPlain}
     onClick={onOpenPlainLyrics}
-    title={hasPlain ? "Текст песни" : "Текст недоступен"}
     className={`transition ${
       hasPlain
       ? "text-white/50 hover:text-white"
@@ -149,7 +146,6 @@ export default function BottomBar({
     <button
     disabled={!hasSynced}
     onClick={onOpenKaraokeLyrics}
-    title={hasSynced ? "Караоке (официальный Яндекс)" : "Караоке недоступно"}
     className={`transition ${
       hasSynced
       ? "text-white/50 hover:text-white"

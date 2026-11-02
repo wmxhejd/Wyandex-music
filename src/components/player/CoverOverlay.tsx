@@ -117,7 +117,6 @@ export default function CoverOverlay({
     <button
     disabled={!hasLyrics && !showLyricsColumn}
     onClick={onToggleLyricsColumn}
-    title={showLyricsColumn ? "Скрыть текст" : !hasLyrics ? "Текст недоступен" : "Показать текст"}
     className={`w-11 h-11 rounded-full transition-all hover:scale-110 shadow-lg border flex items-center justify-center flex-shrink-0 ${
       showLyricsColumn
       ? "bg-[#ffcc00] text-black border-[#ffcc00] shadow-[0_0_15px_rgba(255,204,0,0.4)]"

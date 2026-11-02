@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Pause, SkipBack, SkipForward, Heart, ThumbsDown, Disc3, Volume2, MoreHorizontal, User, Repeat, Shuffle, FileText, Check, Copy } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Heart, ThumbsDown, Disc3, Volume2, MoreHorizontal, User, Repeat, Shuffle, FileText, Check, Copy, X } from "lucide-react";
 import { Track } from "../types";
 import { useLikes } from "../context/LikesContext";
 import { formatTime } from "../utils/formatTime";
@@ -13,10 +13,14 @@ interface WaveViewProps {
   volume: number;
   repeat: boolean;
   shuffle: boolean;
+  sourceTitle?: string | null;
+  isWaveMode?: boolean;
+  onDropToWave?: () => void;
   onPlayTrack: (track: Track, tracks: Track[]) => void;
   onPlayPause: () => void;
   onNextTrack: () => void;
   onPrevTrack: () => void;
+  onDislikeTrack?: () => void;
   onSeek: (seconds: number) => void;
   onVolumeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onIsDraggingVol: (dragging: boolean) => void;
@@ -40,10 +44,14 @@ export default function WaveView({
   volume,
   repeat,
   shuffle,
+  sourceTitle,
+  isWaveMode = false,
+  onDropToWave,
   onPlayTrack,
   onPlayPause,
   onNextTrack,
   onPrevTrack,
+  onDislikeTrack,
   onSeek,
   onVolumeChange,
   onIsDraggingVol,
@@ -167,7 +175,7 @@ export default function WaveView({
   }
 
   const handleMainPlayClick = () => {
-    if (!isWaveStarted) {
+    if (!isWaveMode) {
       onStartWaveSession?.();
       return;
     }
@@ -175,12 +183,34 @@ export default function WaveView({
       onPlayPause();
     } else if (activeTrack) {
       onPlayTrack(activeTrack, queue);
+    } else {
+      onStartWaveSession?.();
     }
   };
 
   return (
     <div className="relative w-full h-full min-h-screen flex flex-col items-center justify-center overflow-hidden select-none">
     <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 max-w-3xl mx-auto w-full translate-x-20 md:translate-x-28">
+    <div className="min-h-8 mb-3 flex items-center justify-center">
+    {sourceTitle && (
+      <div className="inline-flex items-center space-x-2 py-1 px-3.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-xl shadow-lg cursor-pointer animate-in fade-in zoom-in-95 duration-200">
+      <span className="text-xs md:text-sm font-bold text-[#ffcc00] tracking-wide">
+      {sourceTitle}
+      </span>
+      <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onDropToWave?.();
+      }}
+      className="w-4 h-4 rounded-full bg-[#ffcc00] text-black flex items-center justify-center hover:scale-110 active:scale-95 transition-transform outline-none focus:outline-none"
+      >
+      <X size={11} strokeWidth={3} />
+      </button>
+      </div>
+    )}
+    </div>
+
     <div className="min-h-16 mb-6 flex items-center justify-center w-full overflow-hidden">
     <h1
     key={activeTrack?.id || "empty-artist"}
@@ -188,7 +218,6 @@ export default function WaveView({
     className={`text-5xl md:text-6xl font-black text-white tracking-tight leading-tight truncate ${
       isWaveStarted ? "hover:text-[#ffcc00] cursor-pointer" : ""
     } transition-colors select-none`}
-    title={isWaveStarted ? "К исполнителю" : undefined}
     >
     {artistName}
     </h1>
@@ -199,7 +228,6 @@ export default function WaveView({
     className={`relative mb-10 rounded-[32px] overflow-hidden shadow-[0_28px_70px_rgba(0,0,0,0.85)] border border-white/10 group flex-shrink-0 ${
       isWaveStarted ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""
     } transition-transform duration-300`}
-    title={isWaveStarted ? "Развернуть полноэкранный плеер" : undefined}
     >
     {coverUrl ? (
       <img
@@ -222,7 +250,6 @@ export default function WaveView({
     onMouseLeave={() => setShowVolume(false)}
     >
     <button
-    title="Громкость"
     className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
     >
     <Volume2 size={19} />
@@ -252,8 +279,13 @@ export default function WaveView({
 
     <button
     disabled={!isWaveStarted}
-    onClick={onNextTrack}
-    title="Не нравится (следующий трек)"
+    onClick={() => {
+      if (onDislikeTrack) {
+        onDislikeTrack();
+      } else {
+        onNextTrack();
+      }
+    }}
     className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <ThumbsDown size={19} />
@@ -262,7 +294,6 @@ export default function WaveView({
     <div
     ref={capsuleRef}
     onMouseDown={handleCapsuleMouseDown}
-    title={isWaveStarted ? "Зажмите и тяните для перемотки" : undefined}
     className={`relative w-64 md:w-80 h-[72px] bg-white/10 ${isWaveStarted ? "hover:bg-white/15 cursor-pointer" : "cursor-default"} backdrop-blur-xl border border-white/15 rounded-full overflow-hidden select-none transition group flex-shrink-0 shadow-none`}
     >
     <div
@@ -293,7 +324,6 @@ export default function WaveView({
     <button
     disabled={!isWaveStarted}
     onClick={() => activeTrack && toggleLike(activeTrack.id)}
-    title={trackIsLiked ? "Удалить из любимых" : "Нравится"}
     className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <Heart
@@ -306,7 +336,6 @@ export default function WaveView({
     <button
     disabled={!isWaveStarted}
     onClick={() => setShowMenu(!showMenu)}
-    title="Меню"
     className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
     >
     <MoreHorizontal size={19} />

@@ -27,24 +27,48 @@ body {
   user-select: none;
 }
 
-@keyframes aura-float-1 {
+@keyframes aura-morph-1 {
   0%, 100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
     transform: translate(-50%, -50%) rotate(0deg) scale(1);
   }
-  33% {
-    transform: translate(-47%, -53%) rotate(120deg) scale(1.08);
+  25% {
+    border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%;
+    transform: translate(-48%, -52%) rotate(90deg) scale(1.08);
   }
-  66% {
-    transform: translate(-53%, -47%) rotate(240deg) scale(0.95);
+  50% {
+    border-radius: 30% 70% 70% 30% / 50% 30% 70% 50%;
+    transform: translate(-52%, -48%) rotate(180deg) scale(0.95);
+  }
+  75% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    transform: translate(-49%, -51%) rotate(270deg) scale(1.05);
   }
 }
 
-@keyframes aura-float-2 {
+@keyframes aura-morph-2 {
   0%, 100% {
-    transform: translate(-50%, -50%) rotate(360deg) scale(0.96);
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+    transform: translate(-50%, -50%) rotate(360deg) scale(0.94);
+  }
+  33% {
+    border-radius: 30% 70% 70% 30% / 50% 30% 70% 50%;
+    transform: translate(-52%, -48%) rotate(240deg) scale(1.1);
+  }
+  66% {
+    border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%;
+    transform: translate(-48%, -52%) rotate(120deg) scale(0.98);
+  }
+}
+
+@keyframes aura-morph-3 {
+  0%, 100% {
+    border-radius: 50% 50% 20% 80% / 25% 80% 20% 75%;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1.02);
   }
   50% {
-    transform: translate(-48%, -48%) rotate(180deg) scale(1.1);
+    border-radius: 70% 30% 50% 50% / 30% 60% 40% 70%;
+    transform: translate(-51%, -49%) rotate(180deg) scale(0.92);
   }
 }
 

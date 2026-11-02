@@ -4,6 +4,9 @@ interface AuraBackgroundProps {
   position?: "center" | "left";
   brightness?: number;
   enabled?: boolean;
+  isIdle?: boolean;
+  transitionDuration?: number;
+  animSpeed?: number;
 }
 
 export default function AuraBackground({
@@ -12,52 +15,93 @@ export default function AuraBackground({
   position = "center",
   brightness = 100,
   enabled = true,
+  isIdle = false,
+  transitionDuration = 1.5,
+  animSpeed = 1.0,
 }: AuraBackgroundProps) {
   if (!enabled || brightness <= 0) return null;
 
-  const factor = (brightness / 100) * 1.5;
-  const leftPosition = position === "left" ? "35%" : "50%";
+  const factor = (brightness / 100) * 1.6;
+  const centerPercent = position === "left" ? "35%" : "55%";
+  const shouldGlow = !isIdle && isPlaying;
+
+  const duration1 = 18 / Math.max(0.2, animSpeed);
+  const duration2 = 22 / Math.max(0.2, animSpeed);
+  const duration3 = 14 / Math.max(0.2, animSpeed);
 
   return (
+    <div className="fixed inset-0 w-screen h-screen pointer-events-none z-0 overflow-hidden select-none">
     <div
-    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-[1400px] h-[1400px] md:w-[1700px] md:h-[1700px] pointer-events-none transition-[left] duration-700 ease-in-out z-0"
+    className="absolute inset-0 w-full h-full"
     style={{
-      left: leftPosition,
-      filter: `brightness(${1 + (brightness / 100) * 0.4}) saturate(${1 + (brightness / 100) * 0.3})`,
+      opacity: shouldGlow ? Math.min(1, factor) : 0,
+          transition: isPlaying ? "opacity 2s ease-out" : "opacity 120s ease-out",
     }}
     >
     <div
-    className="absolute top-1/2 left-1/2 w-[900px] h-[900px] md:w-[1200px] md:h-[1200px] rounded-full transition-colors duration-1000 ease-in-out"
+    className="absolute inset-0 w-full h-full"
     style={{
-      opacity: Math.min(1, 0.75 * factor),
-          backgroundColor: colors.c1,
-          filter: "blur(140px)",
-          animation: "aura-float-1 16s ease-in-out infinite",
-          animationPlayState: isPlaying ? "running" : "paused",
+      background: `radial-gradient(ellipse 90% 80% at ${centerPercent} 50%, ${colors.c1} 0%, ${colors.c2} 40%, transparent 80%)`,
+          filter: "blur(60px)",
+          opacity: 0.65,
+          transition: `background 0.5s ease-out`,
     }}
     />
 
     <div
-    className="absolute top-1/2 left-1/2 w-[750px] h-[750px] md:w-[1000px] md:h-[1000px] rounded-full transition-colors duration-1000 ease-in-out"
+    className="absolute will-change-transform"
     style={{
-      opacity: Math.min(1, 0.65 * factor),
-          backgroundColor: colors.c2,
-          filter: "blur(150px)",
-          animation: "aura-float-2 20s ease-in-out infinite",
+      width: "80vw",
+      height: "80vw",
+      maxWidth: "1250px",
+      maxHeight: "1250px",
+      top: "50%",
+      left: centerPercent,
+      backgroundColor: colors.c1,
+      filter: "blur(75px) saturate(1.4)",
+          transition: `background-color ${transitionDuration}s ease-out, left 0.7s ease-out`,
+          animation: `aura-morph-1 ${duration1}s ease-in-out infinite`,
           animationPlayState: isPlaying ? "running" : "paused",
+          opacity: 0.9,
     }}
     />
 
     <div
-    className="absolute top-1/2 left-1/2 w-[600px] h-[600px] md:w-[850px] md:h-[850px] rounded-full transition-colors duration-1000 ease-in-out"
+    className="absolute will-change-transform"
     style={{
-      opacity: Math.min(1, 0.55 * factor),
-          backgroundColor: colors.c3,
-          filter: "blur(130px)",
-          animation: "aura-float-1 13s ease-in-out infinite reverse",
+      width: "68vw",
+      height: "68vw",
+      maxWidth: "1050px",
+      maxHeight: "1050px",
+      top: "50%",
+      left: centerPercent,
+      backgroundColor: colors.c2,
+      filter: "blur(80px) saturate(1.4)",
+          transition: `background-color ${transitionDuration}s ease-out, left 0.7s ease-out`,
+          animation: `aura-morph-2 ${duration2}s ease-in-out infinite`,
           animationPlayState: isPlaying ? "running" : "paused",
+          opacity: 0.8,
     }}
     />
+
+    <div
+    className="absolute will-change-transform"
+    style={{
+      width: "55vw",
+      height: "55vw",
+      maxWidth: "850px",
+      maxHeight: "850px",
+      top: "50%",
+      left: centerPercent,
+      backgroundColor: colors.c3,
+      filter: "blur(65px) saturate(1.4)",
+          transition: `background-color ${transitionDuration}s ease-out, left 0.7s ease-out`,
+          animation: `aura-morph-3 ${duration3}s ease-in-out infinite`,
+          animationPlayState: isPlaying ? "running" : "paused",
+          opacity: 0.7,
+    }}
+    />
+    </div>
     </div>
   );
 }

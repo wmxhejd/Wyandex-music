@@ -28,6 +28,7 @@ interface WaveViewProps {
   error: string;
   onRetry: () => void;
   onArtistClick?: (artistId: number) => void;
+  onStartWaveSession?: () => void;
 }
 
 export default function WaveView({
@@ -54,6 +55,7 @@ export default function WaveView({
   error,
   onRetry,
   onArtistClick,
+  onStartWaveSession,
 }: WaveViewProps) {
   const { isLiked, toggleLike } = useLikes();
   const [showVolume, setShowVolume] = useState(false);
@@ -80,14 +82,15 @@ export default function WaveView({
   const textSpanRef = useRef<HTMLSpanElement>(null);
 
   const activeTrack = currentTrack || queue[0] || null;
+  const isWaveStarted = Boolean(activeTrack);
   const trackIsLiked = activeTrack ? isLiked(activeTrack.id) : false;
 
   const coverUrl = activeTrack?.coverUri
   ? `https://${activeTrack.coverUri.replace("%%", "600x600")}`
   : undefined;
 
-  const artistName = activeTrack?.artists?.map((a) => a.name).join(", ") || "Моя волна";
-  const trackTitle = activeTrack?.title || "Моя волна";
+  const artistName = isWaveStarted ? (activeTrack?.artists?.map((a) => a.name).join(", ") || "Моя волна") : "Моя волна";
+  const trackTitle = isWaveStarted ? (activeTrack?.title || "Моя волна") : "Нажмите Play для старта";
 
   const effectiveDuration = duration > 0 ? duration : (activeTrack?.durationMs ? activeTrack.durationMs / 1000 : 0);
 
@@ -99,7 +102,7 @@ export default function WaveView({
   }, [trackTitle]);
 
   const updateSeekFromEvent = (clientX: number) => {
-    if (!capsuleRef.current || !effectiveDuration) return;
+    if (!capsuleRef.current || !effectiveDuration || !isWaveStarted) return;
     const rect = capsuleRef.current.getBoundingClientRect();
     const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
     const percent = clickX / rect.width;
@@ -107,6 +110,7 @@ export default function WaveView({
   };
 
   const handleCapsuleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isWaveStarted) return;
     isScrubbingRef.current = true;
     updateSeekFromEvent(e.clientX);
 
@@ -136,9 +140,9 @@ export default function WaveView({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const progressPercent = effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0;
+  const progressPercent = isWaveStarted && effectiveDuration > 0 ? (currentTime / effectiveDuration) * 100 : 0;
 
-  if (isLoading && !activeTrack) {
+  if (isLoading && isWaveStarted) {
     return (
       <div className="flex items-center justify-center h-full">
       <div className="w-12 h-12 border-4 border-[#ffcc00] border-t-transparent rounded-full animate-spin" />
@@ -146,7 +150,7 @@ export default function WaveView({
     );
   }
 
-  if (error && !activeTrack) {
+  if (error && isWaveStarted) {
     return (
       <div className="flex items-center justify-center h-full">
       <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 text-center max-w-sm border border-white/15">
@@ -162,24 +166,40 @@ export default function WaveView({
     );
   }
 
+  const handleMainPlayClick = () => {
+    if (!isWaveStarted) {
+      onStartWaveSession?.();
+      return;
+    }
+    if (currentTrack) {
+      onPlayPause();
+    } else if (activeTrack) {
+      onPlayTrack(activeTrack, queue);
+    }
+  };
+
   return (
     <div className="relative w-full h-full min-h-screen flex flex-col items-center justify-center overflow-hidden select-none">
     <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 max-w-3xl mx-auto w-full translate-x-20 md:translate-x-28">
     <div className="min-h-16 mb-6 flex items-center justify-center w-full overflow-hidden">
     <h1
     key={activeTrack?.id || "empty-artist"}
-    onClick={() => activeTrack?.artists?.[0]?.id && onArtistClick && onArtistClick(activeTrack.artists[0].id)}
-    className="text-5xl md:text-6xl font-black text-white tracking-tight leading-tight truncate hover:text-[#ffcc00] transition-colors cursor-pointer select-none"
-    title="К исполнителю"
+    onClick={() => isWaveStarted && activeTrack?.artists?.[0]?.id && onArtistClick && onArtistClick(activeTrack.artists[0].id)}
+    className={`text-5xl md:text-6xl font-black text-white tracking-tight leading-tight truncate ${
+      isWaveStarted ? "hover:text-[#ffcc00] cursor-pointer" : ""
+    } transition-colors select-none`}
+    title={isWaveStarted ? "К исполнителю" : undefined}
     >
     {artistName}
     </h1>
     </div>
 
     <div
-    onClick={onOpenExpanded}
-    className="relative mb-10 rounded-[32px] overflow-hidden shadow-[0_28px_70px_rgba(0,0,0,0.7)] border border-white/10 group flex-shrink-0 cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform duration-300"
-    title="Развернуть полноэкранный плеер"
+    onClick={() => isWaveStarted && onOpenExpanded()}
+    className={`relative mb-10 rounded-[32px] overflow-hidden shadow-[0_28px_70px_rgba(0,0,0,0.85)] border border-white/10 group flex-shrink-0 ${
+      isWaveStarted ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""
+    } transition-transform duration-300`}
+    title={isWaveStarted ? "Развернуть полноэкранный плеер" : undefined}
     >
     {coverUrl ? (
       <img
@@ -189,8 +209,8 @@ export default function WaveView({
       style={{ filter: `brightness(${coverBrightness}%)` }}
       />
     ) : (
-      <div className="w-72 h-72 md:w-80 md:h-80 lg:w-[350px] lg:h-[350px] bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
-      <Disc3 size={72} className="text-white/40" />
+      <div className="w-72 h-72 md:w-80 md:h-80 lg:w-[350px] lg:h-[350px] bg-white/[0.02] border border-white/[0.08] flex items-center justify-center">
+      <Disc3 size={84} className={`text-white/20 ${isLoading ? "animate-spin" : ""}`} />
       </div>
     )}
     </div>
@@ -203,7 +223,7 @@ export default function WaveView({
     >
     <button
     title="Громкость"
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none"
+    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
     >
     <Volume2 size={19} />
     </button>
@@ -231,9 +251,10 @@ export default function WaveView({
     </div>
 
     <button
+    disabled={!isWaveStarted}
     onClick={onNextTrack}
     title="Не нравится (следующий трек)"
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none"
+    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <ThumbsDown size={19} />
     </button>
@@ -241,8 +262,8 @@ export default function WaveView({
     <div
     ref={capsuleRef}
     onMouseDown={handleCapsuleMouseDown}
-    title="Зажмите и тяните для перемотки"
-    className="relative w-64 md:w-80 h-[72px] bg-white/10 hover:bg-white/15 backdrop-blur-xl border border-white/15 rounded-full overflow-hidden cursor-pointer select-none transition group flex-shrink-0 shadow-none"
+    title={isWaveStarted ? "Зажмите и тяните для перемотки" : undefined}
+    className={`relative w-64 md:w-80 h-[72px] bg-white/10 ${isWaveStarted ? "hover:bg-white/15 cursor-pointer" : "cursor-default"} backdrop-blur-xl border border-white/15 rounded-full overflow-hidden select-none transition group flex-shrink-0 shadow-none`}
     >
     <div
     className="absolute top-0 left-0 bottom-0 bg-white/25 pointer-events-none transition-all duration-75"
@@ -270,9 +291,10 @@ export default function WaveView({
     </div>
 
     <button
+    disabled={!isWaveStarted}
     onClick={() => activeTrack && toggleLike(activeTrack.id)}
     title={trackIsLiked ? "Удалить из любимых" : "Нравится"}
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none"
+    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <Heart
     size={19}
@@ -282,14 +304,15 @@ export default function WaveView({
 
     <div className="relative flex-shrink-0">
     <button
+    disabled={!isWaveStarted}
     onClick={() => setShowMenu(!showMenu)}
     title="Меню"
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none"
+    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
     >
     <MoreHorizontal size={19} />
     </button>
 
-    {showMenu && (
+    {showMenu && isWaveStarted && (
       <div className="absolute right-0 bottom-16 w-60 bg-[#121218]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 shadow-2xl text-left z-30 animate-in fade-in zoom-in-95 space-y-1">
       <button
       onClick={() => {
@@ -341,21 +364,16 @@ export default function WaveView({
 
     <div className="flex items-center justify-center space-x-8">
     <button
+    disabled={!isWaveStarted}
     onClick={onPrevTrack}
-    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none"
+    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <SkipBack size={22} fill="currentColor" />
     </button>
 
     <button
-    onClick={() => {
-      if (currentTrack) {
-        onPlayPause();
-      } else if (activeTrack) {
-        onPlayTrack(activeTrack, queue);
-      }
-    }}
-    className="w-20 h-20 rounded-full bg-[#ffcc00] hover:scale-105 active:scale-95 text-black shadow-[0_0_35px_rgba(255,204,0,0.35)] transition-all flex items-center justify-center flex-shrink-0"
+    onClick={handleMainPlayClick}
+    className="w-20 h-20 rounded-full bg-[#ffcc00] hover:scale-105 active:scale-95 text-black shadow-[0_0_35px_rgba(255,204,0,0.35)] transition-all flex items-center justify-center flex-shrink-0 outline-none focus:outline-none"
     >
     {isPlaying ? (
       <Pause size={32} fill="currentColor" />
@@ -365,8 +383,9 @@ export default function WaveView({
     </button>
 
     <button
+    disabled={!isWaveStarted}
     onClick={onNextTrack}
-    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none"
+    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
     >
     <SkipForward size={22} fill="currentColor" />
     </button>

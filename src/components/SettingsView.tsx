@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LogOut, Sun, Image as ImageIcon, ArrowLeft, ChevronRight, Radio, Heart, ListMusic, Search, Settings as SettingsIcon, Sparkles } from "lucide-react";
+import { LogOut, Sun, Image as ImageIcon, ArrowLeft, ChevronRight, Radio, Heart, ListMusic, Search, Settings as SettingsIcon, Sparkles, Activity, Gauge, Maximize2 } from "lucide-react";
 
 interface SettingsViewProps {
     onLogout: () => void;
@@ -18,10 +18,11 @@ interface TabGlowConfig {
     brightness: number;
 }
 
-type TabKey = "wave" | "liked" | "playlists" | "search" | "settings";
+type TabKey = "wave" | "expanded" | "liked" | "playlists" | "search" | "settings";
 
 const DEFAULT_CONFIGS: Record<TabKey, TabGlowConfig> = {
     wave: { enabled: true, brightness: 100 },
+    expanded: { enabled: true, brightness: 100 },
     liked: { enabled: true, brightness: 100 },
     playlists: { enabled: true, brightness: 100 },
     search: { enabled: true, brightness: 100 },
@@ -32,6 +33,11 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
     const [account, setAccount] = useState<AccountData | null>(null);
     const [currentSubpage, setCurrentSubpage] = useState<"main" | TabKey>("main");
 
+    const [masterEnabled, setMasterEnabled] = useState<boolean>(() => {
+        const saved = localStorage.getItem("wyandexmusic_aura_master_enabled");
+        return saved !== null ? saved === "true" : true;
+    });
+
     const [masterBrightness, setMasterBrightness] = useState<number>(() => {
         const saved = localStorage.getItem("wyandexmusic_aura_brightness");
         return saved !== null ? parseInt(saved, 10) : 100;
@@ -40,6 +46,16 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
     const [coverBrightness, setCoverBrightness] = useState<number>(() => {
         const saved = localStorage.getItem("wyandexmusic_cover_brightness");
         return saved !== null ? parseInt(saved, 10) : 100;
+    });
+
+    const [transitionDuration, setTransitionDuration] = useState<number>(() => {
+        const saved = localStorage.getItem("wyandexmusic_aura_transition");
+        return saved !== null ? parseFloat(saved) : 1.5;
+    });
+
+    const [animSpeed, setAnimSpeed] = useState<number>(() => {
+        const saved = localStorage.getItem("wyandexmusic_aura_anim_speed");
+        return saved !== null ? parseFloat(saved) : 1.0;
     });
 
     const [tabConfigs, setTabConfigs] = useState<Record<TabKey, TabGlowConfig>>(() => {
@@ -58,6 +74,13 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         .catch(() => {});
     }, []);
 
+    const handleMasterToggle = () => {
+        const next = !masterEnabled;
+        setMasterEnabled(next);
+        localStorage.setItem("wyandexmusic_aura_master_enabled", String(next));
+        window.dispatchEvent(new Event("aura-settings-updated"));
+    };
+
     const handleMasterBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = parseInt(e.target.value, 10);
         setMasterBrightness(val);
@@ -70,6 +93,20 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         setCoverBrightness(val);
         localStorage.setItem("wyandexmusic_cover_brightness", String(val));
         window.dispatchEvent(new Event("cover-settings-updated"));
+    };
+
+    const handleTransitionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseFloat(e.target.value);
+        setTransitionDuration(val);
+        localStorage.setItem("wyandexmusic_aura_transition", String(val));
+        window.dispatchEvent(new Event("aura-settings-updated"));
+    };
+
+    const handleAnimSpeedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseFloat(e.target.value);
+        setAnimSpeed(val);
+        localStorage.setItem("wyandexmusic_aura_anim_speed", String(val));
+        window.dispatchEvent(new Event("aura-settings-updated"));
     };
 
     const updateTabConfig = (tab: TabKey, partial: Partial<TabGlowConfig>) => {
@@ -86,6 +123,7 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
 
     const subpages: { key: TabKey; label: string; icon: any }[] = [
         { key: "wave", label: "Моя волна", icon: Radio },
+        { key: "expanded", label: "Полноэкранный плеер", icon: Maximize2 },
         { key: "liked", label: "Любимые треки", icon: Heart },
         { key: "playlists", label: "Плейлисты", icon: ListMusic },
         { key: "search", label: "Поиск", icon: Search },
@@ -126,7 +164,7 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
             <Sparkles size={18} className="text-[#ffcc00]" />
             <div>
             <span className="text-sm text-white font-semibold block">Фоновое свечение</span>
-            <p className="text-xs text-white/40 mt-0.5">Эффект цветной ауры для этой вкладки</p>
+            <p className="text-xs text-white/40 mt-0.5">Включение или отключение эффекта</p>
             </div>
             </div>
 
@@ -195,24 +233,51 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         </div>
 
         <div className="space-y-6 pt-4 border-t border-white/[0.06]">
-        <div className="space-y-3">
-        <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2 text-white/80">
-        <Sun size={18} className="text-[#ffcc00]" />
-        <span className="text-sm font-semibold">Общая яркость фонового свечения</span>
+        <div
+        onClick={handleMasterToggle}
+        className="flex items-center justify-between py-2 cursor-pointer"
+        >
+        <div className="flex items-center space-x-3">
+        <Sparkles size={20} className="text-[#ffcc00]" />
+        <div>
+        <span className="text-base text-white font-bold block">Фоновое свечение (Аура)</span>
+        <p className="text-xs text-white/40 mt-0.5">Главный выключатель эффекта во всём приложении</p>
         </div>
-        <span className="text-xs font-mono font-bold text-white/70">{masterBrightness}%</span>
         </div>
 
-        <input
-        type="range"
-        min="0"
-        max="100"
-        value={masterBrightness}
-        onChange={handleMasterBrightnessChange}
-        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
+        <div
+        className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 ${
+            masterEnabled ? "bg-[#ffcc00]" : "bg-white/10"
+        }`}
+        >
+        <div
+        className={`w-4 h-4 rounded-full bg-black transition-transform ${
+            masterEnabled ? "translate-x-5" : "translate-x-0 bg-white/40"
+        }`}
         />
         </div>
+        </div>
+
+        {masterEnabled && (
+            <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-white/80">
+            <Sun size={18} className="text-[#ffcc00]" />
+            <span className="text-sm font-semibold">Общая яркость фонового свечения</span>
+            </div>
+            <span className="text-xs font-mono font-bold text-white/70">{masterBrightness}%</span>
+            </div>
+
+            <input
+            type="range"
+            min="0"
+            max="100"
+            value={masterBrightness}
+            onChange={handleMasterBrightnessChange}
+            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
+            />
+            </div>
+        )}
 
         <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
@@ -232,6 +297,50 @@ export default function SettingsView({ onLogout }: SettingsViewProps) {
         className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
         />
         </div>
+
+        {masterEnabled && (
+            <>
+            <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-white/80">
+            <Activity size={18} className="text-[#ffcc00]" />
+            <span className="text-sm font-semibold">Скорость смены цвета фона</span>
+            </div>
+            <span className="text-xs font-mono font-bold text-white/70">{transitionDuration} сек</span>
+            </div>
+
+            <input
+            type="range"
+            min="0.5"
+            max="5"
+            step="0.5"
+            value={transitionDuration}
+            onChange={handleTransitionChange}
+            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
+            />
+            </div>
+
+            <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-white/80">
+            <Gauge size={18} className="text-[#ffcc00]" />
+            <span className="text-sm font-semibold">Скорость анимации движения ауры</span>
+            </div>
+            <span className="text-xs font-mono font-bold text-white/70">{animSpeed}x</span>
+            </div>
+
+            <input
+            type="range"
+            min="0.5"
+            max="2.5"
+            step="0.25"
+            value={animSpeed}
+            onChange={handleAnimSpeedChange}
+            className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
+            />
+            </div>
+            </>
+        )}
 
         <div className="space-y-2 pt-4 border-t border-white/[0.06]">
         <span className="text-xs uppercase tracking-wider text-white/40 font-bold block mb-3">

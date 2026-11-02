@@ -61,7 +61,7 @@ export default function BottomBar({
   onVolumeChange,
 }: BottomBarProps) {
   return (
-    <div className="bg-black/10 backdrop-blur-2xl border-t border-white/[0.06] select-none">
+    <div className="bg-white/[0.02] hover:bg-white/[0.04] backdrop-blur-md border-t border-white/[0.04] transition-colors select-none">
     <div className="px-6 py-4">
     <div className="flex items-center justify-between space-x-6">
     <div className="flex items-center space-x-4 flex-1 min-w-0">
@@ -74,10 +74,10 @@ export default function BottomBar({
       <img
       src={coverUrl}
       alt={title}
-      className="w-16 h-16 rounded-xl object-cover transition-transform group-hover:scale-105 shadow-lg"
+      className="w-16 h-16 rounded-xl object-cover transition-transform group-hover:scale-105 shadow-md"
       />
     ) : (
-      <div className="w-16 h-16 bg-gradient-to-br from-primary to-cyber-purple rounded-xl shadow-lg" />
+      <div className="w-16 h-16 bg-gradient-to-br from-primary to-cyber-purple rounded-xl shadow-md" />
     )}
     <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
     <Maximize2 size={20} className="text-white" />

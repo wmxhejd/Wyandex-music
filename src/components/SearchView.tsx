@@ -1,278 +1,282 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LogOut, Sun, Image as ImageIcon, ArrowLeft, ChevronRight, Radio, Heart, ListMusic, Search, Sparkles } from "lucide-react";
+import { Search, Music2, Disc3, X } from "lucide-react";
+import TrackList from "./TrackList";
+import { Track } from "../types";
 
-interface SettingsViewProps {
-  onLogout: () => void;
+interface SearchViewProps {
+  query: string;
+  onQueryChange: (q: string) => void;
+  onPlayTrack: (track: Track, tracks?: Track[]) => void;
+  onArtistClick?: (artistId: number) => void;
+  onAlbumClick?: (albumId: number) => void;
 }
 
-interface AccountData {
-  uid: number | string;
-  login: string;
-  displayName?: string;
-  avatarUrl?: string;
+type SearchType = "top" | "track" | "artist" | "album";
+
+interface Artist {
+  id: number;
+  name: string;
+  cover?: {
+    uri?: string;
+  };
 }
 
-interface TabGlowConfig {
-  enabled: boolean;
-  brightness: number;
+interface SearchAlbum {
+  id: number;
+  title: string;
+  year?: number;
+  coverUri?: string;
+  artists: { id: number; name: string }[];
+  trackCount?: number;
 }
 
-type TabKey = "wave" | "liked" | "playlists" | "search";
-
-const DEFAULT_CONFIGS: Record<TabKey, TabGlowConfig> = {
-  wave: { enabled: true, brightness: 40 },
-  liked: { enabled: true, brightness: 40 },
-  playlists: { enabled: true, brightness: 40 },
-  search: { enabled: true, brightness: 40 },
-};
-
-export default function SettingsView({ onLogout }: SettingsViewProps) {
-  const [account, setAccount] = useState<AccountData | null>(null);
-  const [currentSubpage, setCurrentSubpage] = useState<"main" | TabKey>("main");
-
-  const [masterBrightness, setMasterBrightness] = useState<number>(() => {
-    const saved = localStorage.getItem("wyandexmusic_aura_brightness");
-    return saved !== null ? parseInt(saved, 10) : 40;
-  });
-
-  const [coverBrightness, setCoverBrightness] = useState<number>(() => {
-    const saved = localStorage.getItem("wyandexmusic_cover_brightness");
-    return saved !== null ? parseInt(saved, 10) : 100;
-  });
-
-  const [tabConfigs, setTabConfigs] = useState<Record<TabKey, TabGlowConfig>>(() => {
-    const saved = localStorage.getItem("wyandexmusic_tab_glow_configs");
-    if (saved) {
-      try {
-        return { ...DEFAULT_CONFIGS, ...JSON.parse(saved) };
-      } catch {}
-    }
-    return DEFAULT_CONFIGS;
-  });
+export default function SearchView({ query, onQueryChange, onPlayTrack, onArtistClick, onAlbumClick }: SearchViewProps) {
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
+  const [albums, setAlbums] = useState<SearchAlbum[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [searchType, setSearchType] = useState<SearchType>("top");
 
   useEffect(() => {
-    invoke<AccountData>("get_account_info")
-    .then((data) => setAccount(data))
-    .catch(() => {});
-  }, []);
+    if (query.trim()) {
+      searchContent();
+    } else {
+      setTracks([]);
+      setArtists([]);
+      setAlbums([]);
+    }
+  }, [query, searchType]);
 
-  const handleMasterBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    setMasterBrightness(val);
-    localStorage.setItem("wyandexmusic_aura_brightness", String(val));
-    window.dispatchEvent(new Event("aura-settings-updated"));
+  const searchContent = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      if (searchType === "top") {
+        const results = await invoke<{ tracks: Track[]; artists: Artist[] }>("search_all", { query });
+        setTracks(results.tracks || []);
+        setArtists(results.artists || []);
+        setAlbums([]);
+      } else if (searchType === "track") {
+        const trackResults = await invoke<Track[]>("search_tracks", { query, searchType: "track" });
+        setTracks(trackResults);
+        setArtists([]);
+        setAlbums([]);
+      } else if (searchType === "artist") {
+        const results = await invoke<{ tracks: Track[]; artists: Artist[] }>("search_all", { query });
+        setArtists(results.artists || []);
+        setTracks(results.tracks?.slice(0, 10) || []);
+        setAlbums([]);
+      } else if (searchType === "album") {
+        const albumResults = await invoke<SearchAlbum[]>("search_albums", { query });
+        setAlbums(albumResults);
+        setTracks([]);
+        setArtists([]);
+      }
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCoverBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10);
-    setCoverBrightness(val);
-    localStorage.setItem("wyandexmusic_cover_brightness", String(val));
-    window.dispatchEvent(new Event("cover-settings-updated"));
-  };
-
-  const updateTabConfig = (tab: TabKey, partial: Partial<TabGlowConfig>) => {
-    const updated = {
-      ...tabConfigs,
-      [tab]: { ...tabConfigs[tab], ...partial },
-    };
-    setTabConfigs(updated);
-    localStorage.setItem("wyandexmusic_tab_glow_configs", JSON.stringify(updated));
-    window.dispatchEvent(new Event("aura-settings-updated"));
-  };
-
-  const name = account?.displayName || account?.login || "Пользователь";
-
-  const subpages: { key: TabKey; label: string; icon: any }[] = [
-    { key: "wave", label: "Моя волна", icon: Radio },
-    { key: "liked", label: "Любимые треки", icon: Heart },
-    { key: "playlists", label: "Плейлисты", icon: ListMusic },
-    { key: "search", label: "Поиск", icon: Search },
+  const filters: { type: SearchType; label: string }[] = [
+    { type: "top", label: "Топ" },
+    { type: "track", label: "Треки" },
+    { type: "artist", label: "Исполнители" },
+    { type: "album", label: "Альбомы" },
   ];
 
-  if (currentSubpage !== "main") {
-    const activeInfo = subpages.find((s) => s.key === currentSubpage)!;
-    const Icon = activeInfo.icon;
-    const currentCfg = tabConfigs[currentSubpage] || DEFAULT_CONFIGS[currentSubpage];
+  const getArtistCoverUrl = (artist: Artist) => {
+    const uri = artist.cover?.uri;
+    if (!uri) return undefined;
+    return `https://${uri.replace("%%", "300x300")}`;
+  };
 
-    return (
-      <div className="max-w-xl space-y-8 select-none pt-4 pb-20">
+  const getAlbumCoverUrl = (uri?: string) => {
+    if (!uri) return undefined;
+    return `https://${uri.replace("%%", "300x300")}`;
+  };
+
+  return (
+    <div className="space-y-8 max-w-5xl select-none">
+    <div className="relative border-b border-white/10 focus-within:border-[#ffcc00] transition-colors pb-3">
+    <Search size={26} className="absolute left-1 top-1/2 -translate-y-1/2 text-white/40" />
+    <input
+    type="text"
+    autoFocus
+    value={query}
+    onChange={(e) => onQueryChange(e.target.value)}
+    placeholder="Что хотите послушать?"
+    className="w-full bg-transparent pl-12 pr-12 py-2 text-3xl font-black text-white placeholder:text-white/25 focus:outline-none tracking-tight"
+    />
+    {query && (
       <button
-      onClick={() => setCurrentSubpage("main")}
-      className="flex items-center space-x-2 text-white/50 hover:text-white transition-colors"
+      onClick={() => onQueryChange("")}
+      className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition"
       >
-      <ArrowLeft size={18} />
-      <span className="text-sm font-medium">Назад к настройкам</span>
+      <X size={22} />
       </button>
+    )}
+    </div>
 
-      <div className="flex items-center space-x-4">
-      <div className="w-12 h-12 rounded-2xl bg-[#ffcc00]/10 flex items-center justify-center text-[#ffcc00] border border-[#ffcc00]/20">
-      <Icon size={24} />
-      </div>
-      <div>
-      <h1 className="text-3xl font-black text-white tracking-tight">{activeInfo.label}</h1>
-      <p className="text-xs text-white/40 mt-0.5">Индивидуальные параметры раздела</p>
-      </div>
-      </div>
-
-      <div className="space-y-6 pt-4 border-t border-white/[0.06]">
-      <div className="p-5 bg-white/[0.03] border border-white/[0.06] rounded-2xl space-y-5">
-      <div
-      onClick={() => updateTabConfig(currentSubpage, { enabled: !currentCfg.enabled })}
-      className="flex items-center justify-between cursor-pointer"
-      >
-      <div className="flex items-center space-x-3">
-      <Sparkles size={20} className="text-[#ffcc00]" />
-      <div>
-      <span className="text-sm text-white font-semibold block">Фоновое свечение</span>
-      <p className="text-xs text-white/40 mt-0.5">Эффект цветной ауры для этой вкладки</p>
-      </div>
-      </div>
-
-      <div
-      className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 ${
-        currentCfg.enabled ? "bg-[#ffcc00]" : "bg-white/10"
+    <div className="flex items-center space-x-8">
+    {filters.map((filter) => (
+      <button
+      key={filter.type}
+      onClick={() => setSearchType(filter.type)}
+      className={`relative pb-2 text-sm font-bold transition-all ${
+        searchType === filter.type
+        ? "text-[#ffcc00]"
+        : "text-white/40 hover:text-white"
       }`}
       >
-      <div
-      className={`w-4 h-4 rounded-full bg-black transition-transform ${
-        currentCfg.enabled ? "translate-x-5" : "translate-x-0 bg-white/40"
-      }`}
-      />
-      </div>
-      </div>
+      <span>{filter.label}</span>
+      {searchType === filter.type && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#ffcc00] shadow-[0_0_12px_rgba(255,204,0,0.8)]" />
+      )}
+      </button>
+    ))}
+    </div>
 
-      {currentCfg.enabled && (
-        <div className="space-y-3 pt-3 border-t border-white/[0.04]">
-        <div className="flex items-center justify-between">
-        <span className="text-xs text-white/70">Яркость свечения</span>
-        <span className="text-xs font-mono font-bold text-white/70">{currentCfg.brightness}%</span>
+    {loading && (
+      <div className="flex items-center justify-center py-24">
+      <div className="w-10 h-10 border-3 border-[#ffcc00] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )}
+
+    {error && (
+      <div className="text-center py-12 text-red-400 text-sm">
+      {error}
+      </div>
+    )}
+
+    {!loading && !query.trim() && (
+      <div className="flex flex-col items-center justify-center py-28 text-center">
+      <Music2 size={48} className="text-white/20 mb-4 stroke-[1.5]" />
+      <h2 className="text-2xl font-bold text-white tracking-tight">Поиск треков, артистов и альбомов</h2>
+      <p className="text-xs text-white/40 mt-1">Введите название песни, имя исполнителя или альбом выше</p>
+      </div>
+    )}
+
+    {!loading && query.trim() && searchType === "top" && (
+      <div className="space-y-10">
+      {artists.length > 0 && (
+        <div>
+        <h2 className="text-lg font-bold text-white mb-4">Исполнители</h2>
+        <div className="flex gap-4 overflow-x-auto pb-4">
+        {artists.map((artist) => {
+          const coverUrl = getArtistCoverUrl(artist);
+          return (
+            <div
+            key={artist.id}
+            className="flex flex-col items-center cursor-pointer group flex-shrink-0"
+            onClick={() => onArtistClick && onArtistClick(artist.id)}
+            >
+            {coverUrl ? (
+              <img
+              src={coverUrl}
+              alt={artist.name}
+              className="w-28 h-28 rounded-full object-cover shadow-xl border border-white/10 group-hover:scale-105 transition-transform"
+              />
+            ) : (
+              <div className="w-28 h-28 rounded-full bg-white/[0.06] flex items-center justify-center shadow-xl border border-white/10 group-hover:scale-105 transition-transform">
+              <Music2 size={36} className="text-white/40" />
+              </div>
+            )}
+            <p className="mt-2.5 text-xs text-white font-semibold text-center max-w-[112px] truncate">
+            {artist.name}
+            </p>
+            </div>
+          );
+        })}
         </div>
-        <input
-        type="range"
-        min="0"
-        max="100"
-        value={currentCfg.brightness}
-        onChange={(e) => updateTabConfig(currentSubpage, { brightness: parseInt(e.target.value, 10) })}
-        className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
-        />
+        </div>
+      )}
+
+      {tracks.length > 0 && (
+        <div>
+        <h2 className="text-lg font-bold text-white mb-4">Треки</h2>
+        <TrackList tracks={tracks.slice(0, 15)} onPlayTrack={onPlayTrack} />
         </div>
       )}
       </div>
-      </div>
-      </div>
-    );
-  }
+    )}
 
-  return (
-    <div className="max-w-xl space-y-10 select-none pt-4 pb-20">
-    <div>
-    <h1 className="text-4xl font-black text-white tracking-tight">
-    Настройки
-    </h1>
-    </div>
+    {!loading && query.trim() && searchType === "track" && tracks.length > 0 && (
+      <TrackList tracks={tracks} onPlayTrack={onPlayTrack} />
+    )}
 
-    <div className="flex items-center space-x-5">
-    {account?.avatarUrl ? (
-      <img
-      src={account.avatarUrl}
-      alt={name}
-      className="w-16 h-16 rounded-full object-cover shadow-[0_0_25px_rgba(255,255,255,0.15)] border border-white/20"
-      />
-    ) : (
-      <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-black font-extrabold text-2xl shadow-[0_0_25px_rgba(255,204,0,0.4)]">
-      {name.charAt(0).toUpperCase()}
+    {!loading && query.trim() && searchType === "artist" && artists.length > 0 && (
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      {artists.map((artist) => {
+        const coverUrl = getArtistCoverUrl(artist);
+        return (
+          <div
+          key={artist.id}
+          className="flex flex-col items-center cursor-pointer group"
+          onClick={() => onArtistClick && onArtistClick(artist.id)}
+          >
+          {coverUrl ? (
+            <img
+            src={coverUrl}
+            alt={artist.name}
+            className="w-full aspect-square rounded-full object-cover shadow-xl border border-white/10 group-hover:scale-105 transition-transform"
+            />
+          ) : (
+            <div className="w-full aspect-square rounded-full bg-white/[0.06] flex items-center justify-center shadow-xl border border-white/10 group-hover:scale-105 transition-transform">
+            <Music2 size={48} className="text-white/40" />
+            </div>
+          )}
+          <p className="mt-3 text-sm text-white font-semibold text-center w-full truncate">
+          {artist.name}
+          </p>
+          </div>
+        );
+      })}
       </div>
     )}
-    <div>
-    <h2 className="text-xl font-bold text-white">
-    {name}
-    </h2>
-    <p className="text-xs text-white/50 font-mono mt-0.5">
-    UID: {account?.uid || "—"}
-    </p>
-    </div>
-    </div>
 
-    <div className="space-y-6 pt-4 border-t border-white/[0.06]">
-    <div className="space-y-3">
-    <div className="flex items-center justify-between">
-    <div className="flex items-center space-x-2 text-white/80">
-    <Sun size={18} className="text-[#ffcc00]" />
-    <span className="text-sm font-semibold">Общая яркость фонового свечения</span>
-    </div>
-    <span className="text-xs font-mono font-bold text-white/70">{masterBrightness}%</span>
-    </div>
-
-    <input
-    type="range"
-    min="0"
-    max="100"
-    value={masterBrightness}
-    onChange={handleMasterBrightnessChange}
-    className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
-    />
-    </div>
-
-    <div className="space-y-3 pt-2">
-    <div className="flex items-center justify-between">
-    <div className="flex items-center space-x-2 text-white/80">
-    <ImageIcon size={18} className="text-[#ffcc00]" />
-    <span className="text-sm font-semibold">Яркость обложек треков</span>
-    </div>
-    <span className="text-xs font-mono font-bold text-white/70">{coverBrightness}%</span>
-    </div>
-
-    <input
-    type="range"
-    min="0"
-    max="100"
-    value={coverBrightness}
-    onChange={handleCoverBrightnessChange}
-    className="w-full h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ffcc00] [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(255,204,0,0.5)]"
-    />
-    </div>
-
-    <div className="space-y-3 pt-4 border-t border-white/[0.06]">
-    <span className="text-xs uppercase tracking-wider text-white/40 font-bold block mb-2">
-    Настройки разделов
-    </span>
-
-    <div className="space-y-2">
-    {subpages.map((item) => {
-      const Icon = item.icon;
-      return (
-        <div
-        key={item.key}
-        onClick={() => setCurrentSubpage(item.key)}
-        className="flex items-center justify-between p-3.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.05] rounded-2xl transition cursor-pointer group"
-        >
-        <div className="flex items-center space-x-3.5">
-        <div className="w-9 h-9 rounded-xl bg-white/[0.05] flex items-center justify-center text-white/70 group-hover:text-[#ffcc00] transition-colors">
-        <Icon size={18} />
+    {!loading && query.trim() && searchType === "album" && (
+      <div>
+      {albums.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {albums.map((album) => {
+          const coverUrl = getAlbumCoverUrl(album.coverUri);
+          return (
+            <div
+            key={album.id}
+            onClick={() => onAlbumClick && onAlbumClick(album.id)}
+            className="p-4 hover:bg-white/[0.04] rounded-2xl transition cursor-pointer group"
+            >
+            {coverUrl ? (
+              <img
+              src={coverUrl}
+              alt={album.title}
+              className="w-full aspect-square rounded-xl object-cover mb-3 group-hover:scale-105 transition-transform shadow-lg"
+              />
+            ) : (
+              <div className="w-full aspect-square rounded-xl bg-white/[0.05] flex items-center justify-center mb-3">
+              <Disc3 size={40} className="text-white/40" />
+              </div>
+            )}
+            <h3 className="text-white font-semibold truncate group-hover:text-[#ffcc00] transition">{album.title}</h3>
+            <p className="text-xs text-white/40 truncate mt-0.5">
+            {album.artists.map((a) => a.name).join(", ")}
+            </p>
+            </div>
+          );
+        })}
         </div>
-        <span className="text-sm font-semibold text-white/90 group-hover:text-white">
-        {item.label}
-        </span>
+      ) : (
+        <div className="text-center py-20 text-white/30 text-sm">
+        Альбомы не найдены
         </div>
-
-        <ChevronRight size={18} className="text-white/30 group-hover:text-white group-hover:translate-x-0.5 transition" />
-        </div>
-      );
-    })}
-    </div>
-    </div>
-    </div>
-
-    <div className="pt-4 border-t border-white/[0.06]">
-    <button
-    onClick={onLogout}
-    className="group flex items-center space-x-3 px-6 py-3 rounded-2xl text-sm font-semibold text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500/20 transition-all duration-200 border border-red-500/15"
-    >
-    <LogOut size={17} className="transition-transform group-hover:-translate-x-0.5" />
-    <span>Выйти из аккаунта</span>
-    </button>
-    </div>
+      )}
+      </div>
+    )}
     </div>
   );
 }

@@ -23,34 +23,34 @@ type View = "wave" | "liked" | "playlists" | "search" | "artist" | "album" | "se
 
 const VIEW_AURAS: Record<Exclude<View, "wave">, { c1: string; c2: string; c3: string }> = {
   liked: {
-    c1: "rgba(225, 29, 72, 0.45)",
-    c2: "rgba(244, 63, 94, 0.35)",
-    c3: "rgba(159, 18, 57, 0.25)",
+    c1: "#ff1744",
+    c2: "#ff4081",
+    c3: "#f50057",
   },
   playlists: {
-    c1: "rgba(79, 70, 229, 0.45)",
-    c2: "rgba(14, 165, 233, 0.35)",
-    c3: "rgba(99, 102, 241, 0.25)",
+    c1: "#3d5afe",
+    c2: "#00e5ff",
+    c3: "#651fff",
   },
   search: {
-    c1: "rgba(245, 158, 11, 0.45)",
-    c2: "rgba(217, 119, 6, 0.35)",
-    c3: "rgba(180, 83, 9, 0.25)",
+    c1: "#ff9100",
+    c2: "#ffab00",
+    c3: "#ffd600",
   },
   settings: {
-    c1: "rgba(139, 92, 246, 0.45)",
-    c2: "rgba(168, 85, 247, 0.35)",
-    c3: "rgba(76, 29, 149, 0.25)",
+    c1: "#d500f9",
+    c2: "#7c4dff",
+    c3: "#651fff",
   },
   artist: {
-    c1: "rgba(99, 102, 241, 0.4)",
-    c2: "rgba(168, 85, 247, 0.35)",
-    c3: "rgba(59, 130, 246, 0.25)",
+    c1: "#651fff",
+    c2: "#d500f9",
+    c3: "#2979ff",
   },
   album: {
-    c1: "rgba(234, 88, 12, 0.4)",
-    c2: "rgba(245, 158, 11, 0.35)",
-    c3: "rgba(239, 68, 68, 0.25)",
+    c1: "#ff6d00",
+    c2: "#ff9100",
+    c3: "#ff1744",
   },
 };
 
@@ -58,6 +58,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   const [currentView, setCurrentView] = useState<View>("wave");
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [queue, setQueue] = useState<Track[]>([]);
   const [waveQueue, setWaveQueue] = useState<Track[]>([]);
@@ -71,9 +72,24 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     return saved ? parseInt(saved, 10) : 80;
   });
 
+  const [masterAuraEnabled, setMasterAuraEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem("wyandexmusic_aura_master_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+
   const [masterAuraBrightness, setMasterAuraBrightness] = useState<number>(() => {
     const saved = localStorage.getItem("wyandexmusic_aura_brightness");
     return saved !== null ? parseInt(saved, 10) : 100;
+  });
+
+  const [transitionDuration, setTransitionDuration] = useState<number>(() => {
+    const saved = localStorage.getItem("wyandexmusic_aura_transition");
+    return saved !== null ? parseFloat(saved) : 1.5;
+  });
+
+  const [animSpeed, setAnimSpeed] = useState<number>(() => {
+    const saved = localStorage.getItem("wyandexmusic_aura_anim_speed");
+    return saved !== null ? parseFloat(saved) : 1.0;
   });
 
   const [tabGlowConfigs, setTabGlowConfigs] = useState<Record<string, { enabled: boolean; brightness: number }>>(() => {
@@ -88,12 +104,18 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
 
   useEffect(() => {
     const updateAura = () => {
+      const e = localStorage.getItem("wyandexmusic_aura_master_enabled");
+      if (e !== null) setMasterAuraEnabled(e === "true");
       const b = localStorage.getItem("wyandexmusic_aura_brightness");
       if (b !== null) setMasterAuraBrightness(parseInt(b, 10));
-      const s = localStorage.getItem("wyandexmusic_tab_glow_configs");
-      if (s) {
+      const t = localStorage.getItem("wyandexmusic_aura_transition");
+      if (t !== null) setTransitionDuration(parseFloat(t));
+      const s = localStorage.getItem("wyandexmusic_aura_anim_speed");
+      if (s !== null) setAnimSpeed(parseFloat(s));
+      const cfgs = localStorage.getItem("wyandexmusic_tab_glow_configs");
+      if (cfgs) {
         try {
-          setTabGlowConfigs(JSON.parse(s));
+          setTabGlowConfigs(JSON.parse(cfgs));
         } catch {}
       }
     };
@@ -142,9 +164,11 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   }, [currentView, waveCoverColors]);
 
   const currentTabCfg = tabGlowConfigs[currentView];
-  const isCurrentAuraEnabled = currentTabCfg ? currentTabCfg.enabled : true;
+  const isCurrentAuraEnabled = masterAuraEnabled && (currentTabCfg ? currentTabCfg.enabled : true);
   const tabBrightnessFactor = currentTabCfg ? currentTabCfg.brightness / 100 : 1;
   const effectiveAuraBrightness = Math.round(masterAuraBrightness * tabBrightnessFactor);
+
+  const isWaveIdle = currentView === "wave" && !currentTrack && waveQueue.length === 0;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -178,12 +202,14 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     };
 
     audio.addEventListener("timeupdate", handleTime);
+    audio.addEventListener("seeked", handleTime);
     audio.addEventListener("loadedmetadata", handleTime);
     audio.addEventListener("ended", handleEnd);
     audio.addEventListener("volumechange", handleVol);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTime);
+      audio.removeEventListener("seeked", handleTime);
       audio.removeEventListener("loadedmetadata", handleTime);
       audio.removeEventListener("ended", handleEnd);
       audio.removeEventListener("volumechange", handleVol);
@@ -232,18 +258,16 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
 
       setWaveQueue(initialTracks);
       setWaveLoading(false);
+
+      if (initialTracks.length > 0) {
+        handlePlayTrack(initialTracks[0], initialTracks, true);
+      }
     } catch (err) {
       console.error("Failed to start wave session:", err);
       setWaveError("Failed to load wave tracks");
       setWaveLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    if (currentView === "wave" && waveQueue.length === 0 && !waveLoading) {
-      startWaveSession();
-    }
-  }, [currentView, waveQueue.length, waveLoading, startWaveSession]);
 
   const handlePlayTrack = (track: Track, fromQueue?: Track[], fromWave = false) => {
     if (!fromQueue) return;
@@ -432,17 +456,24 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     position="center"
     brightness={effectiveAuraBrightness}
     enabled={isCurrentAuraEnabled}
+    isIdle={isWaveIdle}
+    transitionDuration={transitionDuration}
+    animSpeed={animSpeed}
     />
 
-    <Sidebar
-    currentView={currentView}
-    onViewChange={(v) => setCurrentView(v as View)}
-    />
+    {!isPlayerExpanded && (
+      <Sidebar
+      currentView={currentView}
+      onViewChange={(v) => setCurrentView(v as View)}
+      />
+    )}
 
-    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full z-10">
-    <div className="absolute top-2.5 right-3.5 z-40 flex items-center pointer-events-auto">
-    <WindowControls />
-    </div>
+    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full">
+    {!isPlayerExpanded && (
+      <div className="absolute top-2.5 right-3.5 z-40 flex items-center pointer-events-auto">
+      <WindowControls />
+      </div>
+    )}
 
     <div data-tauri-drag-region className="absolute top-0 left-0 right-16 h-10 z-30" />
 
@@ -472,6 +503,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       error={waveError}
       onRetry={startWaveSession}
       onArtistClick={handleArtistClick}
+      onStartWaveSession={startWaveSession}
       />
     )}
     {currentView === "liked" && (
@@ -534,6 +566,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     audioRef={audioRef}
     onArtistClick={handleArtistClick}
     hideBottomBar={currentView === "wave"}
+    onExpandedChange={setIsPlayerExpanded}
     />
     </div>
     </div>

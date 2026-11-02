@@ -15,10 +15,10 @@ interface PlayerProps {
   onPrevTrack: () => void;
   shuffle: boolean;
   onShuffleToggle: () => void;
-  isDirectClick?: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   onArtistClick?: (artistId: number) => void;
   hideBottomBar?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 interface LyricsData {
@@ -32,7 +32,12 @@ export interface PlayerHandle {
   openExpanded: () => void;
 }
 
-const urlCache = new Map<string, string>();
+interface CachedStream {
+  url: string;
+  expiresAt: number;
+}
+
+const urlCache = new Map<string, CachedStream>();
 
 const Player = forwardRef<PlayerHandle, PlayerProps>(({
   track,
@@ -44,6 +49,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   audioRef,
   onArtistClick,
   hideBottomBar = false,
+  onExpandedChange,
 }, ref) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -69,6 +75,10 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   const { isLiked, toggleLike } = useLikes();
 
   const trackIsLiked = track ? isLiked(track.id) : false;
+
+  useEffect(() => {
+    onExpandedChange?.(isExpanded);
+  }, [isExpanded, onExpandedChange]);
 
   useImperativeHandle(ref, () => ({
     openLyrics: () => {
@@ -207,15 +217,6 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       );
     };
 
-    const handleTrackEnd = () => {
-      if (repeat) {
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-      } else {
-        onNextTrack(false);
-      }
-    };
-
     const handleAudioVolumeChange = () => {
       if (!isDraggingRef.current) {
         const linearVal = Math.round(Math.cbrt(audio.volume) * 100);
@@ -226,17 +227,17 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("seeked", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleTimeUpdate);
-    audio.addEventListener("ended", handleTrackEnd);
     audio.addEventListener("volumechange", handleAudioVolumeChange);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("seeked", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleTimeUpdate);
-      audio.removeEventListener("ended", handleTrackEnd);
       audio.removeEventListener("volumechange", handleAudioVolumeChange);
     };
-  }, [track?.id, track?.durationMs, repeat, onNextTrack]);
+  }, [track?.id, track?.durationMs]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator) || !track) return;
@@ -297,10 +298,14 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     setLoading(true);
 
     try {
-      let url = urlCache.get(track.id);
-      if (!url) {
+      const cached = urlCache.get(track.id);
+      let url = "";
+
+      if (cached && cached.expiresAt > Date.now()) {
+        url = cached.url;
+      } else {
         url = await invoke<string>("get_stream_url", { trackId: track.id });
-        urlCache.set(track.id, url);
+        urlCache.set(track.id, { url, expiresAt: Date.now() + 2 * 60 * 60 * 1000 });
       }
 
       if (currentRequestId !== activeRequestIdRef.current) return;

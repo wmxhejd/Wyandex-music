@@ -21,17 +21,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
+            libappindicator3-dev \
             librsvg2-dev \
             patchelf \
             libasound2-dev \
-            libssl-dev \
-            libgstreamer1.0-dev \
-            libgstreamer-plugins-base1.0-dev \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good \
-            gstreamer1.0-plugins-bad \
-            gstreamer1.0-libav
+            libssl-dev
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Wyandex Music ${{ github.ref_name }}'
+          tagName: v__VERSION__
+          releaseName: 'Wyandex Music v__VERSION__'
           releaseDraft: false
           prerelease: false

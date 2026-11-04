@@ -7,6 +7,12 @@ const YANDEX_OAUTH_URL: &str = "https://oauth.yandex.ru/authorize?response_type=
 
 #[tauri::command]
 pub async fn open_auth_window(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("yandex-auth") {
+        let _ = window.show();
+        let _ = window.set_focus();
+        return Ok(());
+    }
+
     let app_handle = app.clone();
 
     let _auth_window = WebviewWindowBuilder::new(

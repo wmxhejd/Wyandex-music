@@ -14,10 +14,10 @@
     "windows": [
       {
         "title": "Wyandexmusic",
-        "width": 1400,
-        "height": 900,
-        "minWidth": 1200,
-        "minHeight": 700,
+        "width": 1280,
+        "height": 800,
+        "minWidth": 720,
+        "minHeight": 480,
         "decorations": false,
         "transparent": false,
         "resizable": true,
@@ -46,6 +46,9 @@
     "linux": {
       "deb": {
         "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": true
       }
     }
   },

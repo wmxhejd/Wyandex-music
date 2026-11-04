@@ -53,16 +53,15 @@ export default function CoverOverlay({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   return (
-    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-6 backdrop-blur-[2px]">
-    <div className="flex justify-end items-center relative">
-    <button
-    onClick={() => setShowMoreMenu(!showMoreMenu)}
-    className="w-10 h-10 rounded-full bg-[#181822] hover:bg-[#20202c] text-white transition hover:scale-110 shadow-xl border border-white/20 flex items-center justify-center flex-shrink-0"
+    <div
+    onMouseLeave={() => setShowMoreMenu(false)}
+    className={`absolute inset-0 p-2.5 sm:p-4 flex flex-col justify-between select-none ${
+      showMoreMenu
+      ? "bg-black/95 backdrop-blur-md opacity-100"
+      : "bg-black/60 opacity-0 group-hover:opacity-100 backdrop-blur-[2px] transition-opacity duration-150"
+    }`}
     >
-    <MoreHorizontal size={20} />
-    </button>
-
-    {showMoreMenu && (
+    {showMoreMenu ? (
       <MoreMenu
       title={title}
       artistNames={artistNames}
@@ -74,71 +73,81 @@ export default function CoverOverlay({
       providers={providers}
       currentProvider={currentProvider}
       onSelectProvider={onSelectProvider}
+      onClose={() => setShowMoreMenu(false)}
       />
-    )}
-    </div>
-
-    <div className="flex items-center justify-center space-x-6">
-    <button
-    onClick={onPrev}
-    className="w-12 h-12 rounded-full bg-black/80 hover:bg-black text-white transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
-    >
-    <SkipBack size={24} fill="currentColor" />
-    </button>
-    <button
-    onClick={onPlayPause}
-    className="w-16 h-16 rounded-full bg-[#ffcc00] hover:scale-110 active:scale-95 text-black shadow-2xl transition flex items-center justify-center flex-shrink-0"
-    >
-    {isPlaying ? (
-      <Pause size={28} fill="currentColor" />
     ) : (
-      <Play size={28} fill="currentColor" className="translate-x-0.5" />
+      <>
+      <div className="flex justify-end items-center">
+      <button
+      onClick={() => setShowMoreMenu(true)}
+      className="w-8 h-8 sm:w-9 sm:h-9 aspect-square rounded-full bg-[#181822] hover:bg-[#20202c] text-white transition hover:scale-105 shadow-xl border border-white/20 flex items-center justify-center shrink-0"
+      >
+      <MoreHorizontal className="w-4 h-4 sm:w-4.5 sm:h-4.5 aspect-square shrink-0" />
+      </button>
+      </div>
+
+      <div className="flex items-center justify-center space-x-3 sm:space-x-4">
+      <button
+      onClick={onPrev}
+      className="w-9 h-9 sm:w-11 sm:h-11 aspect-square rounded-full bg-black/80 hover:bg-black text-white transition hover:scale-105 shadow-lg border border-white/10 flex items-center justify-center shrink-0"
+      >
+      <SkipBack className="w-4.5 h-4.5 sm:w-5 sm:h-5 aspect-square shrink-0" fill="currentColor" />
+      </button>
+      <button
+      onClick={onPlayPause}
+      className="w-12 h-12 sm:w-15 sm:h-15 aspect-square rounded-full bg-[#ffcc00] hover:scale-105 active:scale-95 text-black shadow-2xl transition flex items-center justify-center shrink-0"
+      >
+      {isPlaying ? (
+        <Pause className="w-6 h-6 sm:w-7 sm:h-7 aspect-square shrink-0" fill="currentColor" />
+      ) : (
+        <Play className="w-6 h-6 sm:w-7 sm:h-7 aspect-square shrink-0 translate-x-0.5" fill="currentColor" />
+      )}
+      </button>
+      <button
+      onClick={onNext}
+      className="w-9 h-9 sm:w-11 sm:h-11 aspect-square rounded-full bg-black/80 hover:bg-black text-white transition hover:scale-105 shadow-lg border border-white/10 flex items-center justify-center shrink-0"
+      >
+      <SkipForward className="w-4.5 h-4.5 sm:w-5 sm:h-5 aspect-square shrink-0" fill="currentColor" />
+      </button>
+      </div>
+
+      <div className="flex items-center justify-between">
+      <button
+      onClick={onLikeClick}
+      className="w-8 h-8 sm:w-9 sm:h-9 aspect-square rounded-full bg-black/80 hover:bg-black transition hover:scale-105 shadow-lg border border-white/10 flex items-center justify-center shrink-0"
+      >
+      <Heart
+      className={`w-4 h-4 sm:w-4.5 sm:h-4.5 aspect-square shrink-0 ${trackIsLiked ? "fill-red-500 text-red-500" : "text-white"}`}
+      />
+      </button>
+
+      <button
+      disabled={!hasLyrics && !showLyricsColumn}
+      onClick={onToggleLyricsColumn}
+      className={`w-8 h-8 sm:w-9 sm:h-9 aspect-square rounded-full transition-all hover:scale-105 shadow-lg border flex items-center justify-center shrink-0 ${
+        showLyricsColumn
+        ? "bg-[#ffcc00] text-black border-[#ffcc00] shadow-[0_0_12px_rgba(255,204,0,0.4)]"
+        : hasLyrics
+        ? "bg-black/80 hover:bg-black text-white/90 hover:text-white border-white/10"
+        : "bg-black/40 text-white/20 border-white/5 cursor-not-allowed"
+      }`}
+      >
+      <YandexLyricsIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 aspect-square shrink-0" />
+      </button>
+
+      <button
+      onClick={onRepeatToggle}
+      className={`w-8 h-8 sm:w-9 sm:h-9 aspect-square rounded-full transition hover:scale-105 shadow-lg border border-white/10 flex items-center justify-center shrink-0 ${
+        repeat
+        ? "bg-primary/30 text-primary border-primary ring-2 ring-primary/40 shadow-[0_0_12px_rgba(255,204,0,0.4)]"
+        : "bg-black/80 text-white/70 hover:text-white"
+      }`}
+      >
+      <Repeat className="w-4 h-4 sm:w-4.5 sm:h-4.5 aspect-square shrink-0" />
+      </button>
+      </div>
+      </>
     )}
-    </button>
-    <button
-    onClick={onNext}
-    className="w-12 h-12 rounded-full bg-black/80 hover:bg-black text-white transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
-    >
-    <SkipForward size={24} fill="currentColor" />
-    </button>
-    </div>
-
-    <div className="flex items-center justify-between">
-    <button
-    onClick={onLikeClick}
-    className="w-10 h-10 rounded-full bg-black/80 hover:bg-black transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0"
-    >
-    <Heart
-    size={20}
-    className={trackIsLiked ? "fill-red-500 text-red-500" : "text-white"}
-    />
-    </button>
-
-    <button
-    disabled={!hasLyrics && !showLyricsColumn}
-    onClick={onToggleLyricsColumn}
-    className={`w-11 h-11 rounded-full transition-all hover:scale-110 shadow-lg border flex items-center justify-center flex-shrink-0 ${
-      showLyricsColumn
-      ? "bg-[#ffcc00] text-black border-[#ffcc00] shadow-[0_0_15px_rgba(255,204,0,0.4)]"
-      : hasLyrics
-      ? "bg-black/80 hover:bg-black text-white/90 hover:text-white border-white/10"
-      : "bg-black/40 text-white/20 border-white/5 cursor-not-allowed"
-    }`}
-    >
-    <YandexLyricsIcon size={22} />
-    </button>
-
-    <button
-    onClick={onRepeatToggle}
-    className={`w-10 h-10 rounded-full transition hover:scale-110 shadow-lg border border-white/10 flex items-center justify-center flex-shrink-0 ${
-      repeat
-      ? "bg-primary/30 text-primary border-primary ring-2 ring-primary/40 shadow-[0_0_15px_rgba(255,204,0,0.4)]"
-      : "bg-black/80 text-white/70 hover:text-white"
-    }`}
-    >
-    <Repeat size={20} />
-    </button>
-    </div>
     </div>
   );
 }

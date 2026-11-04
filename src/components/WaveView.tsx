@@ -153,15 +153,15 @@ export default function WaveView({
   if (isLoading && isWaveStarted) {
     return (
       <div className="flex items-center justify-center h-full">
-      <div className="w-12 h-12 border-4 border-[#ffcc00] border-t-transparent rounded-full animate-spin" />
+      <div className="w-10 h-10 border-4 border-[#ffcc00] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error && isWaveStarted) {
     return (
-      <div className="flex items-center justify-center h-full">
-      <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-8 text-center max-w-sm border border-white/15">
+      <div className="flex items-center justify-center h-full p-4">
+      <div className="bg-white/10 backdrop-blur-2xl rounded-3xl p-6 text-center max-w-sm border border-white/15">
       <p className="text-red-400 text-sm mb-4">{error}</p>
       <button
       onClick={onRetry}
@@ -189,12 +189,12 @@ export default function WaveView({
   };
 
   return (
-    <div className="relative w-full h-full min-h-screen flex flex-col items-center justify-center overflow-hidden select-none">
-    <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 max-w-3xl mx-auto w-full translate-x-20 md:translate-x-28">
-    <div className="min-h-8 mb-3 flex items-center justify-center">
+    <div className="relative w-full h-full min-h-0 flex flex-col items-center justify-center overflow-y-auto px-4 py-4 select-none">
+    <div className="relative z-10 flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full">
+    <div className="min-h-6 mb-1.5 flex items-center justify-center">
     {sourceTitle && (
-      <div className="inline-flex items-center space-x-2 py-1 px-3.5 rounded-full bg-black/60 border border-white/10 backdrop-blur-xl shadow-lg cursor-pointer animate-in fade-in zoom-in-95 duration-200">
-      <span className="text-xs md:text-sm font-bold text-[#ffcc00] tracking-wide">
+      <div className="inline-flex items-center space-x-2 py-1 px-3 rounded-full bg-black/60 border border-white/10 backdrop-blur-xl shadow-lg cursor-pointer">
+      <span className="text-xs font-bold text-[#ffcc00] tracking-wide">
       {sourceTitle}
       </span>
       <button
@@ -203,19 +203,19 @@ export default function WaveView({
         e.stopPropagation();
         onDropToWave?.();
       }}
-      className="w-4 h-4 rounded-full bg-[#ffcc00] text-black flex items-center justify-center hover:scale-110 active:scale-95 transition-transform outline-none focus:outline-none"
+      className="w-4 h-4 aspect-square rounded-full bg-[#ffcc00] text-black flex items-center justify-center hover:scale-110 active:scale-95 transition-transform shrink-0"
       >
-      <X size={11} strokeWidth={3} />
+      <X className="w-2.5 h-2.5 aspect-square shrink-0" strokeWidth={3} />
       </button>
       </div>
     )}
     </div>
 
-    <div className="min-h-16 mb-6 flex items-center justify-center w-full overflow-hidden">
+    <div className="min-h-10 mb-3 flex items-center justify-center w-full px-2">
     <h1
     key={activeTrack?.id || "empty-artist"}
     onClick={() => isWaveStarted && activeTrack?.artists?.[0]?.id && onArtistClick && onArtistClick(activeTrack.artists[0].id)}
-    className={`text-5xl md:text-6xl font-black text-white tracking-tight leading-tight truncate ${
+    className={`text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight truncate ${
       isWaveStarted ? "hover:text-[#ffcc00] cursor-pointer" : ""
     } transition-colors select-none`}
     >
@@ -225,7 +225,7 @@ export default function WaveView({
 
     <div
     onClick={() => isWaveStarted && onOpenExpanded()}
-    className={`relative mb-10 rounded-[32px] overflow-hidden shadow-[0_28px_70px_rgba(0,0,0,0.85)] border border-white/10 group flex-shrink-0 ${
+    className={`relative mb-5 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)] border border-white/10 group flex-shrink-0 aspect-square w-[16rem] h-[16rem] sm:w-[20rem] sm:h-[20rem] md:w-[22rem] md:h-[22rem] max-w-[80vw] max-h-[42vh] ${
       isWaveStarted ? "cursor-pointer hover:scale-[1.02] active:scale-[0.98]" : ""
     } transition-transform duration-300`}
     >
@@ -233,32 +233,32 @@ export default function WaveView({
       <img
       src={coverUrl}
       alt={activeTrack?.title || "Cover"}
-      className="w-72 h-72 md:w-80 md:h-80 lg:w-[350px] lg:h-[350px] object-cover transition-[filter] duration-300"
+      className="w-full h-full object-cover transition-[filter] duration-300"
       style={{ filter: `brightness(${coverBrightness}%)` }}
       />
     ) : (
-      <div className="w-72 h-72 md:w-80 md:h-80 lg:w-[350px] lg:h-[350px] bg-white/[0.02] border border-white/[0.08] flex items-center justify-center">
-      <Disc3 size={84} className={`text-white/20 ${isLoading ? "animate-spin" : ""}`} />
+      <div className="w-full h-full bg-white/[0.02] border border-white/[0.08] flex items-center justify-center">
+      <Disc3 className={`w-16 h-16 text-white/20 aspect-square shrink-0 ${isLoading ? "animate-spin" : ""}`} />
       </div>
     )}
     </div>
 
-    <div className="flex items-center justify-center space-x-3 w-full mb-10">
+    <div className="flex items-center justify-center space-x-2 sm:space-x-3 w-full mb-5 max-w-lg px-2">
     <div
-    className="relative group flex-shrink-0"
+    className="relative flex-shrink-0"
     onMouseEnter={() => setShowVolume(true)}
     onMouseLeave={() => setShowVolume(false)}
     >
     <button
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
+    className="w-10 h-10 sm:w-11 sm:h-11 aspect-square rounded-full bg-white/10 hover:bg-white/20 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center outline-none shrink-0"
     >
-    <Volume2 size={19} />
+    <Volume2 className="w-4.5 h-4.5 aspect-square shrink-0" />
     </button>
 
     {showVolume && (
-      <div className="absolute left-1/2 -translate-x-1/2 bottom-14 py-3.5 px-3 bg-[#121218]/90 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl z-30 flex flex-col items-center animate-in fade-in zoom-in-95">
-      <span className="text-[11px] font-mono text-white/90 mb-2">{Math.round(volume)}%</span>
-      <div className="h-28 w-6 flex items-center justify-center">
+      <div className="absolute left-1/2 -translate-x-1/2 bottom-12 py-3 px-2 bg-[#121218]/95 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl z-30 flex flex-col items-center">
+      <span className="text-[10px] font-mono text-white/90 mb-2">{Math.round(volume)}%</span>
+      <div className="h-24 w-6 flex items-center justify-center">
       <input
       type="range"
       min="0"
@@ -270,7 +270,7 @@ export default function WaveView({
       onTouchStart={() => onIsDraggingVol(true)}
       onTouchEnd={() => onIsDraggingVol(false)}
       onChange={onVolumeChange}
-      className="h-1.5 w-24 -rotate-90 appearance-none bg-white/20 rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+      className="h-1.5 w-20 -rotate-90 appearance-none bg-white/20 rounded-full cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
       />
       </div>
       </div>
@@ -286,23 +286,25 @@ export default function WaveView({
         onNextTrack();
       }
     }}
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
+    className="w-10 h-10 sm:w-11 sm:h-11 aspect-square rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 outline-none"
     >
-    <ThumbsDown size={19} />
+    <ThumbsDown className="w-4.5 h-4.5 aspect-square shrink-0" />
     </button>
 
     <div
     ref={capsuleRef}
     onMouseDown={handleCapsuleMouseDown}
-    className={`relative w-64 md:w-80 h-[72px] bg-white/10 ${isWaveStarted ? "hover:bg-white/15 cursor-pointer" : "cursor-default"} backdrop-blur-xl border border-white/15 rounded-full overflow-hidden select-none transition group flex-shrink-0 shadow-none`}
+    className={`relative flex-1 min-w-0 h-11 sm:h-13 bg-white/10 ${
+      isWaveStarted ? "hover:bg-white/15 cursor-pointer" : "cursor-default"
+    } backdrop-blur-xl border border-white/15 rounded-full overflow-hidden select-none transition flex-shrink shadow-none`}
     >
     <div
     className="absolute top-0 left-0 bottom-0 bg-white/25 pointer-events-none transition-all duration-75"
     style={{ width: `${progressPercent}%` }}
     />
 
-    <div className="relative z-10 w-full h-full px-6 flex items-center justify-between text-white pointer-events-none overflow-hidden">
-    <div ref={textContainerRef} className="overflow-hidden mr-3 flex-1 flex items-center">
+    <div className="relative z-10 w-full h-full px-4 flex items-center justify-between text-white pointer-events-none overflow-hidden space-x-2">
+    <div ref={textContainerRef} className="overflow-hidden min-w-0 flex-1 flex items-center">
     <span
     key={activeTrack?.id || "empty-title"}
     ref={textSpanRef}
@@ -310,12 +312,12 @@ export default function WaveView({
       animation: overflowOffset > 0 ? "marquee-pingpong 7s ease-in-out infinite alternate" : "none",
       "--scroll-dist": `-${overflowOffset}px`,
     } as React.CSSProperties}
-    className="whitespace-nowrap inline-block text-sm font-semibold"
+    className="whitespace-nowrap inline-block text-xs sm:text-sm font-semibold truncate"
     >
     {trackTitle}
     </span>
     </div>
-    <span className="font-mono text-white/80 text-xs flex-shrink-0">
+    <span className="font-mono text-white/80 text-[11px] sm:text-xs flex-shrink-0">
     {formatTime(currentTime)} / {formatTime(effectiveDuration)}
     </span>
     </div>
@@ -324,11 +326,10 @@ export default function WaveView({
     <button
     disabled={!isWaveStarted}
     onClick={() => activeTrack && toggleLike(activeTrack.id)}
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
+    className="w-10 h-10 sm:w-11 sm:h-11 aspect-square rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 border border-white/15 backdrop-blur-xl transition flex items-center justify-center flex-shrink-0 outline-none"
     >
     <Heart
-    size={19}
-    className={trackIsLiked ? "fill-red-500 text-red-500" : "text-white"}
+    className={`w-4.5 h-4.5 aspect-square shrink-0 ${trackIsLiked ? "fill-red-500 text-red-500" : "text-white"}`}
     />
     </button>
 
@@ -336,35 +337,35 @@ export default function WaveView({
     <button
     disabled={!isWaveStarted}
     onClick={() => setShowMenu(!showMenu)}
-    className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center shadow-none outline-none focus:outline-none"
+    className="w-10 h-10 sm:w-11 sm:h-11 aspect-square rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white border border-white/15 backdrop-blur-xl transition flex items-center justify-center outline-none shrink-0"
     >
-    <MoreHorizontal size={19} />
+    <MoreHorizontal className="w-4.5 h-4.5 aspect-square shrink-0" />
     </button>
 
     {showMenu && isWaveStarted && (
-      <div className="absolute right-0 bottom-16 w-60 bg-[#121218]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 shadow-2xl text-left z-30 animate-in fade-in zoom-in-95 space-y-1">
+      <div className="absolute right-0 bottom-14 w-52 bg-[#121218]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-2 shadow-2xl text-left z-30 space-y-1">
       <button
       onClick={() => {
         setShowMenu(false);
         onOpenLyrics();
       }}
-      className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
+      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
       >
-      <FileText size={15} />
+      <FileText className="w-3.5 h-3.5 aspect-square shrink-0" />
       <span>Текст песни / Караоке</span>
       </button>
       <button
       onClick={onRepeatToggle}
-      className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-xs transition ${repeat ? "text-[#ffcc00] font-semibold" : "text-white"}`}
+      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-white/10 text-xs transition ${repeat ? "text-[#ffcc00] font-semibold" : "text-white"}`}
       >
-      <Repeat size={15} />
+      <Repeat className="w-3.5 h-3.5 aspect-square shrink-0" />
       <span>{repeat ? "Повтор включен" : "Повторять трек"}</span>
       </button>
       <button
       onClick={onShuffleToggle}
-      className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-xs transition ${shuffle ? "text-[#ffcc00] font-semibold" : "text-white"}`}
+      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-white/10 text-xs transition ${shuffle ? "text-[#ffcc00] font-semibold" : "text-white"}`}
       >
-      <Shuffle size={15} />
+      <Shuffle className="w-3.5 h-3.5 aspect-square shrink-0" />
       <span>{shuffle ? "Случайный порядок" : "Перемешать"}</span>
       </button>
       {activeTrack?.artists?.[0]?.id && onArtistClick && (
@@ -373,17 +374,17 @@ export default function WaveView({
           setShowMenu(false);
           onArtistClick(activeTrack.artists[0].id);
         }}
-        className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
+        className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
         >
-        <User size={15} />
+        <User className="w-3.5 h-3.5 aspect-square shrink-0" />
         <span className="truncate">К исполнителю</span>
         </button>
       )}
       <button
       onClick={handleCopy}
-      className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
+      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-white/10 text-xs text-white transition"
       >
-      {copied ? <Check size={15} className="text-green-400" /> : <Copy size={15} />}
+      {copied ? <Check className="w-3.5 h-3.5 text-green-400 aspect-square shrink-0" /> : <Copy className="w-3.5 h-3.5 aspect-square shrink-0" />}
       <span>{copied ? "Скопировано!" : "Копировать название"}</span>
       </button>
       </div>
@@ -391,32 +392,32 @@ export default function WaveView({
     </div>
     </div>
 
-    <div className="flex items-center justify-center space-x-8">
+    <div className="flex items-center justify-center space-x-5">
     <button
     disabled={!isWaveStarted}
     onClick={onPrevTrack}
-    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
+    className="w-11 h-11 sm:w-13 sm:h-13 aspect-square rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 outline-none"
     >
-    <SkipBack size={22} fill="currentColor" />
+    <SkipBack className="w-5 h-5 sm:w-6 sm:h-6 aspect-square shrink-0" fill="currentColor" />
     </button>
 
     <button
     onClick={handleMainPlayClick}
-    className="w-20 h-20 rounded-full bg-[#ffcc00] hover:scale-105 active:scale-95 text-black shadow-[0_0_35px_rgba(255,204,0,0.35)] transition-all flex items-center justify-center flex-shrink-0 outline-none focus:outline-none"
+    className="w-14 h-14 sm:w-18 sm:h-18 aspect-square rounded-full bg-[#ffcc00] hover:scale-105 active:scale-95 text-black shadow-[0_0_25px_rgba(255,204,0,0.35)] transition-all flex items-center justify-center flex-shrink-0 outline-none"
     >
     {isPlaying ? (
-      <Pause size={32} fill="currentColor" />
+      <Pause className="w-7 h-7 sm:w-9 sm:h-9 aspect-square shrink-0" fill="currentColor" />
     ) : (
-      <Play size={32} fill="currentColor" className="translate-x-0.5" />
+      <Play className="w-7 h-7 sm:w-9 sm:h-9 aspect-square shrink-0 translate-x-0.5" fill="currentColor" />
     )}
     </button>
 
     <button
     disabled={!isWaveStarted}
     onClick={onNextTrack}
-    className="w-14 h-14 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 shadow-none outline-none focus:outline-none"
+    className="w-11 h-11 sm:w-13 sm:h-13 aspect-square rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-white/10 text-white transition-all hover:scale-105 border border-white/15 backdrop-blur-xl flex items-center justify-center flex-shrink-0 outline-none"
     >
-    <SkipForward size={22} fill="currentColor" />
+    <SkipForward className="w-5 h-5 sm:w-6 sm:h-6 aspect-square shrink-0" fill="currentColor" />
     </button>
     </div>
     </div>

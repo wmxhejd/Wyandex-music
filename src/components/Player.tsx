@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Track } from "../types";
 import { useLikes } from "../context/LikesContext";
@@ -15,6 +15,8 @@ interface PlayerProps {
   onPrevTrack: () => void;
   shuffle: boolean;
   onShuffleToggle: () => void;
+  repeat: boolean;
+  onRepeatToggle: () => void;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   onArtistClick?: (artistId: number) => void;
   hideBottomBar?: boolean;
@@ -46,6 +48,8 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
   onPrevTrack,
   shuffle,
   onShuffleToggle,
+  repeat,
+  onRepeatToggle,
   audioRef,
   onArtistClick,
   hideBottomBar = false,
@@ -57,7 +61,6 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     const saved = localStorage.getItem("wyandexmusic_volume") || localStorage.getItem("yandexarbuz_volume");
     return saved ? parseInt(saved, 10) : 80;
   });
-  const [repeat, setRepeat] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -119,18 +122,37 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
     return idx;
   }, [parsedLyrics, currentTime]);
 
-  useEffect(() => {
-    if (!isExpanded || !showLyricsColumn || lyricsMode !== "karaoke") return;
+  const scrollToActiveLine = useCallback((instant = false) => {
     const container = lyricsContainerRef.current;
     const activeEl = activeLineRef.current;
-    if (container && activeEl) {
-      const targetTop = activeEl.offsetTop - container.clientHeight / 2 + activeEl.clientHeight / 2;
-      container.scrollTo({
-        top: Math.max(0, targetTop),
-                         behavior: "smooth",
-      });
-    }
-  }, [currentLineIndex, isExpanded, showLyricsColumn, lyricsMode]);
+    if (!container || !activeEl) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = activeEl.getBoundingClientRect();
+    if (containerRect.height === 0 || activeRect.height === 0) return;
+
+    const delta = (activeRect.top - containerRect.top) - (containerRect.height / 2) + (activeRect.height / 2);
+    const targetTop = container.scrollTop + delta;
+
+    container.scrollTo({
+      top: Math.max(0, targetTop),
+                       behavior: instant ? "auto" : "smooth",
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isExpanded || !showLyricsColumn || lyricsMode !== "karaoke" || lyricsLoading) return;
+
+    scrollToActiveLine(false);
+
+    const t1 = setTimeout(() => scrollToActiveLine(true), 60);
+    const t2 = setTimeout(() => scrollToActiveLine(false), 220);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [currentLineIndex, isExpanded, showLyricsColumn, lyricsMode, lyricsLoading, parsedLyrics.length, scrollToActiveLine]);
 
   useEffect(() => {
     if (!track) return;
@@ -433,7 +455,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
       }}
       onNext={() => onNextTrack(true)}
       onLikeClick={handleLikeClick}
-      onRepeatToggle={() => setRepeat(!repeat)}
+      onRepeatToggle={onRepeatToggle}
       onToggleLyricsColumn={() => setShowLyricsColumn(!showLyricsColumn)}
       onArtistClick={handleArtistClickAction}
       onSeek={handleSeek}
@@ -474,7 +496,7 @@ const Player = forwardRef<PlayerHandle, PlayerProps>(({
         }
       }}
       onNext={() => onNextTrack(true)}
-      onRepeatToggle={() => setRepeat(!repeat)}
+      onRepeatToggle={onRepeatToggle}
       onSeek={handleSeek}
       onOpenPlainLyrics={() => {
         setLyricsMode("plain");

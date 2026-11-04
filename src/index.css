@@ -6,6 +6,22 @@
   --accent-primary: #ffcc00;
 }
 
+html {
+  font-size: clamp(6px, min(1.25vw, 1.85vh), 34px);
+}
+
+body.is-resizing *,
+body.is-resizing {
+  transition: none !important;
+  animation-play-state: paused !important;
+}
+
+*:focus,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 * {
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
@@ -25,6 +41,24 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   user-select: none;
+}
+
+svg {
+  aspect-ratio: 1 / 1 !important;
+  flex-shrink: 0 !important;
+}
+
+img {
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+button.rounded-full:not(:has(span)):not(:has(p)) {
+  aspect-ratio: 1 / 1 !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 @keyframes aura-morph-1 {

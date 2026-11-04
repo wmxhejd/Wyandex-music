@@ -23,41 +23,13 @@ interface MainLayoutProps {
 type View = "wave" | "liked" | "playlists" | "history" | "search" | "artist" | "album" | "settings";
 
 const VIEW_AURAS: Record<Exclude<View, "wave">, { c1: string; c2: string; c3: string }> = {
-  liked: {
-    c1: "#ff1744",
-    c2: "#ff4081",
-    c3: "#f50057",
-  },
-  playlists: {
-    c1: "#3d5afe",
-    c2: "#00e5ff",
-    c3: "#651fff",
-  },
-  history: {
-    c1: "#06b6d4",
-    c2: "#3b82f6",
-    c3: "#0284c7",
-  },
-  search: {
-    c1: "#ff9100",
-    c2: "#ffab00",
-    c3: "#ffd600",
-  },
-  settings: {
-    c1: "#d500f9",
-    c2: "#7c4dff",
-    c3: "#651fff",
-  },
-  artist: {
-    c1: "#651fff",
-    c2: "#d500f9",
-    c3: "#2979ff",
-  },
-  album: {
-    c1: "#ff6d00",
-    c2: "#ff9100",
-    c3: "#ff1744",
-  },
+  liked: { c1: "#ff1744", c2: "#ff4081", c3: "#f50057" },
+  playlists: { c1: "#3d5afe", c2: "#00e5ff", c3: "#651fff" },
+  history: { c1: "#06b6d4", c2: "#3b82f6", c3: "#0284c7" },
+  search: { c1: "#ff9100", c2: "#ffab00", c3: "#ffd600" },
+  settings: { c1: "#d500f9", c2: "#7c4dff", c3: "#651fff" },
+  artist: { c1: "#651fff", c2: "#d500f9", c3: "#2979ff" },
+  album: { c1: "#ff6d00", c2: "#ff9100", c3: "#ff1744" },
 };
 
 export default function MainLayout({ onLogout }: MainLayoutProps) {
@@ -90,7 +62,12 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     return saved !== null ? saved === "true" : true;
   });
 
-  const [masterAuraBrightness, setMasterAuraBrightness] = useState<number>(() => {
+  const [cosmosEnabled, setCosmosEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem("wyandexmusic_cosmos_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const [masterBrightness, setMasterBrightness] = useState<number>(() => {
     const saved = localStorage.getItem("wyandexmusic_aura_brightness");
     return saved !== null ? parseInt(saved, 10) : 100;
   });
@@ -105,7 +82,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     return saved !== null ? parseFloat(saved) : 1.0;
   });
 
-  const [tabGlowConfigs, setTabGlowConfigs] = useState<Record<string, { enabled: boolean; brightness: number }>>(() => {
+  const [tabGlowConfigs, setTabGlowConfigs] = useState<Record<string, any>>(() => {
     const saved = localStorage.getItem("wyandexmusic_tab_glow_configs");
     if (saved) {
       try {
@@ -116,11 +93,19 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   });
 
   useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.loop = repeat;
+    }
+  }, [repeat]);
+
+  useEffect(() => {
     const updateAura = () => {
       const e = localStorage.getItem("wyandexmusic_aura_master_enabled");
       if (e !== null) setMasterAuraEnabled(e === "true");
+      const c = localStorage.getItem("wyandexmusic_cosmos_enabled");
+      if (c !== null) setCosmosEnabled(c === "true");
       const b = localStorage.getItem("wyandexmusic_aura_brightness");
-      if (b !== null) setMasterAuraBrightness(parseInt(b, 10));
+      if (b !== null) setMasterBrightness(parseInt(b, 10));
       const t = localStorage.getItem("wyandexmusic_aura_transition");
       if (t !== null) setTransitionDuration(parseFloat(t));
       const s = localStorage.getItem("wyandexmusic_aura_anim_speed");
@@ -176,9 +161,13 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
   }, [currentView, waveCoverColors]);
 
   const currentTabCfg = tabGlowConfigs[currentView];
-  const isCurrentAuraEnabled = masterAuraEnabled && (currentTabCfg ? currentTabCfg.enabled : true);
-  const tabBrightnessFactor = currentTabCfg ? currentTabCfg.brightness / 100 : 1;
-  const effectiveAuraBrightness = Math.round(masterAuraBrightness * tabBrightnessFactor);
+  const tabGlowEnabled = currentTabCfg ? (currentTabCfg.glowEnabled ?? currentTabCfg.enabled ?? true) : true;
+  const tabCosmosEnabled = currentTabCfg ? (currentTabCfg.cosmosEnabled ?? true) : true;
+  const tabBrightnessFactor = currentTabCfg ? (currentTabCfg.brightness ?? 100) / 100 : 1;
+
+  const effectiveGlowEnabled = masterAuraEnabled && tabGlowEnabled;
+  const effectiveCosmosEnabled = cosmosEnabled && tabCosmosEnabled;
+  const effectiveAuraBrightness = Math.round(masterBrightness * tabBrightnessFactor);
 
   const isWaveIdle = currentView === "wave" && !currentTrack && waveQueue.length === 0;
 
@@ -252,7 +241,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
         }
       }
     } catch (err) {
-      console.error("Failed to replenish wave:", err);
+      console.error(err);
     } finally {
       isFetchingWaveRef.current = false;
     }
@@ -292,8 +281,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
         handlePlayTrack(initialTracks[0], initialTracks, true, null, 0);
       }
     } catch (err) {
-      console.error("Failed to start wave session:", err);
-      setWaveError("Failed to load wave tracks");
+      setWaveError("Не удалось запустить волну");
       setWaveLoading(false);
     }
   }, []);
@@ -542,12 +530,15 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     isPlaying={isPlaying}
     position="center"
     brightness={effectiveAuraBrightness}
-    enabled={isCurrentAuraEnabled}
+    glowEnabled={effectiveGlowEnabled}
+    cosmosEnabled={effectiveCosmosEnabled}
     isIdle={isWaveIdle}
     transitionDuration={transitionDuration}
     animSpeed={animSpeed}
     />
 
+    <div className="flex-1 flex flex-col h-full w-full overflow-hidden relative">
+    <div className="flex-1 flex flex-row h-full w-full overflow-hidden relative">
     {!isPlayerExpanded && (
       <Sidebar
       currentView={currentView}
@@ -555,7 +546,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       />
     )}
 
-    <div className="flex-1 flex flex-col overflow-hidden relative w-full h-full">
+    <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative">
     {!isPlayerExpanded && (
       <div className="absolute top-2.5 right-3.5 z-40 flex items-center pointer-events-auto">
       <WindowControls />
@@ -564,7 +555,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
 
     <div data-tauri-drag-region className="absolute top-0 left-0 right-16 h-10 z-30" />
 
-    <main className="flex-1 overflow-y-auto relative w-full h-full">
+    <main className="flex-1 overflow-y-auto relative w-full h-full min-w-0">
     {currentView === "wave" && (
       <WaveView
       queue={isWaveMode ? waveQueue : queue}
@@ -598,22 +589,22 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       />
     )}
     {currentView === "liked" && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <LikedTracksView onPlayTrack={(track, tracks) => handlePlayTrack(track, tracks, false, "Мне нравится")} />
       </div>
     )}
     {currentView === "playlists" && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <PlaylistsView onPlayTrack={(track, tracks, title) => handlePlayTrack(track, tracks, false, title)} />
       </div>
     )}
     {currentView === "history" && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <HistoryView onPlayTrack={(track, tracks, title) => handlePlayTrack(track, tracks, false, title || "История")} />
       </div>
     )}
     {currentView === "search" && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <SearchView
       query={searchQuery}
       onQueryChange={setSearchQuery}
@@ -624,7 +615,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       </div>
     )}
     {currentView === "artist" && selectedArtistId && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <ArtistView
       artistId={selectedArtistId}
       onBack={() => setCurrentView("search")}
@@ -634,7 +625,7 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       </div>
     )}
     {currentView === "album" && selectedAlbumId && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <AlbumView
       albumId={selectedAlbumId}
       onBack={() => setCurrentView("search")}
@@ -644,11 +635,13 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
       </div>
     )}
     {currentView === "settings" && (
-      <div className="p-8 pt-16 pl-80">
+      <div className="p-4 sm:p-6 lg:p-8 pt-12 sm:pt-14">
       <SettingsView onLogout={onLogout} />
       </div>
     )}
     </main>
+    </div>
+    </div>
 
     <Player
     ref={playerRef}
@@ -659,6 +652,8 @@ export default function MainLayout({ onLogout }: MainLayoutProps) {
     onPrevTrack={handlePrevTrack}
     shuffle={shuffle}
     onShuffleToggle={() => setShuffle(!shuffle)}
+    repeat={repeat}
+    onRepeatToggle={() => setRepeat(!repeat)}
     audioRef={audioRef}
     onArtistClick={handleArtistClick}
     hideBottomBar={currentView === "wave"}

@@ -50,16 +50,16 @@ if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
     echo "Установите их командой:"
     case "$DISTRO" in
         *arch*|*cachyos*|*manjaro*)
-            echo "  sudo pacman -S --needed base-devel nodejs npm rust webkit2gtk-4.1 gtk3 openssl libayatana-appindicator"
+            echo "  sudo pacman -S --needed base-devel nodejs npm rust webkit2gtk-4.1 gtk3 openssl libayatana-appindicator fuse2"
             ;;
         *debian*|*ubuntu*)
-            echo "  sudo apt update && sudo apt install -y build-essential curl libwebkit2gtk-4.1-dev libgtk-3-dev libssl-dev libayatana-appindicator3-dev nodejs npm cargo rustc"
+            echo "  sudo apt update && sudo apt install -y build-essential curl libwebkit2gtk-4.1-dev libgtk-3-dev libssl-dev libayatana-appindicator3-dev libfuse2 nodejs npm cargo rustc"
             ;;
         *fedora*)
-            echo "  sudo dnf install -y webkit2gtk4.1-devel gtk3-devel openssl-devel libayatana-appindicator-devel nodejs npm cargo rust"
+            echo "  sudo dnf install -y webkit2gtk4.1-devel gtk3-devel openssl-devel libayatana-appindicator-devel fuse-libs nodejs npm cargo rust"
             ;;
         *)
-            echo "  Установите эквиваленты пакетов: nodejs, npm, cargo, rust, webkit2gtk-4.1, gtk3, openssl"
+            echo "  Установите эквиваленты пакетов: nodejs, npm, cargo, rust, webkit2gtk-4.1, gtk3, openssl, fuse2"
             ;;
     esac
     exit 1
@@ -71,16 +71,11 @@ if [ ! -d "node_modules" ]; then
 fi
 
 echo ":: Сборка приложения..."
-npm run tauri build
+npm run tauri build -- --no-bundle
 
-SOURCE_BIN=""
-if [ -f "src-tauri/target/release/wyandexmusic" ]; then
-    SOURCE_BIN="src-tauri/target/release/wyandexmusic"
-elif ls src-tauri/target/release/bundle/appimage/*.AppImage 1> /dev/null 2>&1; then
-    SOURCE_BIN=$(ls src-tauri/target/release/bundle/appimage/*.AppImage | head -n 1)
-fi
+SOURCE_BIN="src-tauri/target/release/wyandexmusic"
 
-if [ -z "$SOURCE_BIN" ]; then
+if [ ! -f "$SOURCE_BIN" ]; then
     echo "Ошибка: исполняемый файл не найден после сборки."
     exit 1
 fi

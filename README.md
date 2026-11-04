@@ -20,7 +20,7 @@ cd Wyandex-music
 ./install.sh
 ```
 ### 2 способ:
-Скачать `.AppImage`, `.deb` или `исполняемый файл` из [релизов](https://github.com/wmxhejd/Wyandex-music/releases) и запустить
+Скачать `.AppImage`, `.deb` или `.rpm` из [релизов](https://github.com/wmxhejd/Wyandex-music/releases) и запустить
 
 ---
 
@@ -28,11 +28,7 @@ cd Wyandex-music
 
 ---
 
-**Тестировалось на Arch Linux и ~Debian 13~**
-
-На Debian 13 на данный момент работает **нестабильно**
-
-Также работает нестабильно на мониторах с разрешением **ниже 4К**
+**Тестировалось на Arch Linux**
 
 ---
 

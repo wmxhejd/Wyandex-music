@@ -25,9 +25,7 @@ jobs:
             librsvg2-dev \
             patchelf \
             libasound2-dev \
-            libssl-dev \
-            gstreamer1.0-plugins-base \
-            gstreamer1.0-plugins-good
+            libssl-dev
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
